@@ -9,6 +9,7 @@ from alembic import context
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 
 from database import Base  # noqa
+from database import Company, Conversation
 from dotenv import load_dotenv
 
 # Load .env variables

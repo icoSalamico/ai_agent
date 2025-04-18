@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from sqlalchemy.pool import NullPool
+from sqlalchemy.sql import func
 import os
 from dotenv import load_dotenv
 
@@ -38,7 +40,7 @@ class Conversation(Base):
     phone_number = Column(String, index=True)
     user_message = Column(Text, nullable=False)
     ai_response = Column(Text, nullable=False)
-    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
     
     company_id = Column(Integer, ForeignKey("companies.id"))
     company = relationship("Company", backref="conversations")

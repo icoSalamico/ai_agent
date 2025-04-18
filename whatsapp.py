@@ -4,6 +4,7 @@ from database import get_company_by_phone
 from database import SessionLocal
 from database import Conversation, Company
 from utils.persistence import save_conversation
+from sqlalchemy.exc import SQLAlchemyError
 
 from sqlalchemy.future import select
 
@@ -54,8 +55,15 @@ async def handle_message(data):
                 ai_response=reply,
                 company_id=company.id
             )
-            session.add(conversation)
-            await session.commit()
+            
+            try:
+                session.add(conversation)
+                await session.commit()
+            except SQLAlchemyError as e:
+                await session.rollback()
+                print(f"❌ Error while saving conversation: {e}")
+                raise
+
 
     except Exception as e:
         print(f"Error handling message: {e}")
