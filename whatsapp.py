@@ -3,6 +3,10 @@ from ai_agent import generate_response
 from database import get_company_by_phone
 from database import SessionLocal
 from database import Conversation
+import logging
+
+logger = logging.getLogger(__name__)
+logger.basicConfig(level=logging.INFO)
 
 
 async def handle_message(data):
@@ -11,7 +15,7 @@ async def handle_message(data):
         phone_id = changes["metadata"]["phone_number_id"]
         company = await get_company_by_phone(phone_id)
         if not company:
-            print("Company not found for phone number ID:", phone_id)
+            logger.error("Webhook handling error: %s", "Company not found for phone number ID: ", phone_id)
             return
         
         msg = changes["messages"][0]
@@ -37,7 +41,7 @@ async def handle_message(data):
             await session.commit()
 
     except Exception as e:
-        print("Webhook handling error:", e)
+        logger.error("Webhook handling error: %s", e)
 
 
 async def send_reply(to: str, message: str, company):
@@ -59,4 +63,4 @@ async def send_reply(to: str, message: str, company):
     async with httpx.AsyncClient() as client:
         response = await client.post(url, headers=headers, json=payload)
         if response.status_code != 200:
-            print("Failed to send message:", response.text)
+            logger.error("Webhook handling error: %s", response.text)

@@ -1,6 +1,7 @@
 import openai
 import os
 from dotenv import load_dotenv
+from whatsapp import logger
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -21,5 +22,5 @@ async def generate_response(user_input: str, prompt: str, language: str = "Portu
         )
         return completion.choices[0].message.content.strip()
     except Exception as e:
-        print("Error generating response:",  e)
+        logger.error("Error generating response: %s", e)
         return "Sorry, I couldn't process that right now."
