@@ -57,3 +57,8 @@ async def receive_webhook(request: Request) -> dict:
     data = await request.json()
     await handle_message(data)
     return {"status": "received"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
