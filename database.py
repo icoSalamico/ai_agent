@@ -39,7 +39,7 @@ class Conversation(Base):
     user_message = Column(Text, nullable=False)
     ai_response = Column(Text, nullable=False)
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-
+    
     company_id = Column(Integer, ForeignKey("companies.id"))
     company = relationship("Company", backref="conversations")
 

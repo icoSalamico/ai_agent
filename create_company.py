@@ -1,7 +1,7 @@
 import asyncio
 from database import SessionLocal, Company
 from dotenv import load_dotenv
-from whatsapp import logger
+
 
 load_dotenv()
 
@@ -29,9 +29,8 @@ async def create_company():
         )
         session.add(company)
         await session.commit()
-        logger.info(f"Company {name} created successfully!")
         print(f"Company {name} created successfully!")
 
-        
+
 if __name__ == "__main__":
     asyncio.run(create_company())

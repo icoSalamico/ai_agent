@@ -3,45 +3,32 @@ from ai_agent import generate_response
 from database import get_company_by_phone
 from database import SessionLocal
 from database import Conversation
-import logging
-
-logger = logging.getLogger(__name__)
-logger.basicConfig(level=logging.INFO)
+from utils.persistence import save_conversation
+from database import async_session 
 
 
 async def handle_message(data):
-    try:
-        changes = data["entry"][0]["changes"][0]["value"]
-        phone_id = changes["metadata"]["phone_number_id"]
-        company = await get_company_by_phone(phone_id)
-        if not company:
-            logger.error("Webhook handling error: %s", "Company not found for phone number ID: ", phone_id)
-            return
-        
-        msg = changes["messages"][0]
-        user_text = msg["text"]["body"]
-        sender = msg["from"]
+    # Extract relevant parts
+    entry = data.get("entry", [])[0]
+    changes = entry.get("changes", [])[0]
+    value = changes.get("value", {})
+    messages = value.get("messages", [])
 
-        reply = await generate_response(
-            user_text, 
-            company.ai_prompt,
-            language=company.language,
-            tone=company.tone
-            )
-        await send_reply(sender, reply, company)
+    if not messages:
+        return
 
-        async with SessionLocal() as session:
-            conversation = Conversation(
-                phone_number=sender,
-                user_message=user_text,
-                ai_response=reply,
-                company_id=company.id
-            )
-            session.add(conversation)
-            await session.commit()
+    message = messages[0]
+    phone_number_id = value.get("metadata", {}).get("phone_number_id")
+    from_number = message.get("from")
+    text = message.get("text", {}).get("body")
 
-    except Exception as e:
-        logger.error("Webhook handling error: %s", e)
+    ai_response = await generate_response(phone_number_id, text)  # hypothetical function
+
+    # Save to DB with retry
+    async with async_session() as session:
+        await save_conversation(session, phone_number_id, text, ai_response)
+
+    await send_reply(from_number, ai_response)
 
 
 async def send_reply(to: str, message: str, company):
@@ -63,4 +50,4 @@ async def send_reply(to: str, message: str, company):
     async with httpx.AsyncClient() as client:
         response = await client.post(url, headers=headers, json=payload)
         if response.status_code != 200:
-            logger.error("Webhook handling error: %s", response.text)
+            print(f"Failed to send message: {response.status_code} - {response.text}")

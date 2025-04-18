@@ -8,9 +8,10 @@ from dotenv import load_dotenv
 import os
 import hmac
 import hashlib
-from whatsapp import handle_message, logger
+from whatsapp import handle_message
 from starlette.responses import JSONResponse
 import json
+
 
 load_dotenv()
 
@@ -79,7 +80,7 @@ async def receive_webhook(
         if not data["entry"][0]["changes"][0].get("value", {}).get("messages"):
             raise ValueError("Invalid structure: 'messages' missing.")
     except Exception as e:
-        logger.warning(f"Malformed webhook payload: {e}")
+        print(f"Error parsing JSON: {e}")
         raise HTTPException(status_code=400, detail="Invalid webhook structure.")
 
     # Extract phone_number_id to find the right company
@@ -90,17 +91,17 @@ async def receive_webhook(
     )
 
     if not phone_number_id:
-        logger.warning("Missing phone_number_id in webhook payload")
+        print(f"Missing phone_number_id in webhook data: {data}")
         raise HTTPException(status_code=400, detail="Missing phone_number_id")
 
     company = await get_company_by_phone(phone_number_id)
     if not company or not company.webhook_secret:
-        logger.warning(f"Unknown company or missing secret for phone: {phone_number_id}")
+        print(f"Company not found for phone_number_id: {phone_number_id}")
         raise HTTPException(status_code=404, detail="Company not found")
 
     # Validate signature
     if not x_hub_signature_256:
-        logger.warning("Missing signature header")
+        print(f"Missing X-Hub_Signature-256 header: {x_hub_signature_256}")
         raise HTTPException(status_code=401, detail="Missing signature")
 
     expected_signature = "sha256=" + hmac.new(
@@ -110,7 +111,7 @@ async def receive_webhook(
     ).hexdigest()
 
     if not hmac.compare_digest(expected_signature, x_hub_signature_256):
-        logger.warning(f"Invalid signature for company {company.name}")
+        print(f"Invalid signature: {x_hub_signature_256} != {expected_signature}")
         raise HTTPException(status_code=403, detail="Invalid signature")
 
     # Signature is valid, handle the message
