@@ -51,6 +51,11 @@ async def init_db():
         await conn.run_sync(Base.metadata.create_all)
 
 
+async def get_db() -> AsyncSession:
+    async with SessionLocal() as session:
+        yield session
+
+
 async def get_company_by_phone(phone_id: str):
     async with SessionLocal() as session:
         result = await session.execute(

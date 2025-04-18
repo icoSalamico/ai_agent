@@ -122,3 +122,20 @@ async def receive_webhook(
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from database import SessionLocal
+from database import get_db
+from sqlalchemy import text  
+
+@app.get("/ping-db")
+async def ping_db(session: AsyncSession = Depends(get_db)):
+    try:
+        await session.execute(text("SELECT 1"))  
+        print("✅ DB connection OK")
+        return {"db": "ok"}
+    except Exception as e:
+        print("❌ DB error:", e)
+        return {"db": "error", "detail": str(e)}
