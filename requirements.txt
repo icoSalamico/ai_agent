@@ -37,7 +37,6 @@ piccolo_admin==1.9.1
 piccolo_api==1.5.2
 platformdirs==4.3.7
 priority==2.0.0
-psycopg2-binary==2.9.10
 py==1.11.0
 pydantic==2.11.3
 pydantic_core==2.33.1
