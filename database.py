@@ -25,10 +25,10 @@ class Company(Base):
     whatsapp_token = Column(String)
     verify_token = Column(String)
     ai_prompt = Column(String)
-
     language = Column(String, default="Portuguese")
     tone = Column(String, default="Formal")
     business_hours = Column(String) # e.g. "09:00-18:00"
+    webhook_secret = Column(String, nullable=True)
 
 
 class Conversation(Base):
