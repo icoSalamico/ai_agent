@@ -6,6 +6,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql import func
+from typing import AsyncGenerator
 import os
 from dotenv import load_dotenv
 
@@ -51,7 +52,7 @@ async def init_db():
         await conn.run_sync(Base.metadata.create_all)
 
 
-async def get_db() -> AsyncSession:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with SessionLocal() as session:
         yield session
 
