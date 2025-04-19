@@ -4,6 +4,12 @@ from fastapi.responses import PlainTextResponse
 from starlette.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
+from fastapi.responses import JSONResponse
+from slowapi.middleware import SlowAPIMiddleware
 import os
 import json
 import hmac
@@ -17,16 +23,30 @@ load_dotenv()
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "true").lower() == "true"
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     yield
 
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(lifespan=lifespan)
+
+app.state.limiter = limiter
+
+app.add_middleware(SlowAPIMiddleware)
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request, exc):
+    return JSONResponse(status_code=429, content={"error": "Too many requests"})
+
 
 @app.get("/")
 def home():
     return {"message": "WhatsApp AI Agent is running!"}
+
 
 @app.get("/webhook")
 async def verify_webhook(
@@ -59,6 +79,7 @@ async def verify_webhook(
     else:
         raise HTTPException(status_code=403, detail="Invalid verification token")
 
+
 def verify_signature(app_secret: str, request_body: bytes, signature: str):
     if not signature or "=" not in signature:
         raise HTTPException(status_code=403, detail="Missing or invalid signature format")
@@ -73,12 +94,17 @@ def verify_signature(app_secret: str, request_body: bytes, signature: str):
     if not hmac.compare_digest(expected_hash, signature_hash):
         raise HTTPException(status_code=403, detail="Invalid signature")
 
+
 @app.post("/webhook")
+@limiter.limit("5/second")  # 5 requisições por segundo por IP
 async def receive_webhook(
     request: Request,
     x_hub_signature_256: str = Header(None),
 ):
     raw_body = await request.body()
+
+    if len(raw_body) > 10000:  
+        raise HTTPException(status_code=413, detail="Payload too large")
 
     try:
         data = json.loads(raw_body)
@@ -124,9 +150,11 @@ async def receive_webhook(
     await handle_message(data)
     return JSONResponse({"status": "received"})
 
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
 
 @app.get("/ping-db")
 async def ping_db(session: AsyncSession = Depends(get_db)):
