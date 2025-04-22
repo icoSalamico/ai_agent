@@ -6,6 +6,9 @@ from database import Conversation, Company
 from utils.persistence import save_conversation
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future import select
+import os
+
+DEBUG_MODE = os.getenv("DEBUG_MODE", "true").lower() == "true"
 
 
 async def get_recent_messages(session, phone_number: str, company_id: int, limit: int = 5):
@@ -74,6 +77,10 @@ async def handle_message(data):
 
 
 async def send_reply(to: str, message: str, company):
+    if DEBUG_MODE:
+        print(f"⚠️ DEBUG_MODE: Simulação de envio para {to}: {message}")
+        return
+    
     url = f"https://graph.facebook.com/v17.0/{company.phone_number_id}/messages"
     headers = {
         "Authorization": f"Bearer {company.whatsapp_token}",
