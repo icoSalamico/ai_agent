@@ -1,52 +1,51 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Query, Header, HTTPException, Depends
-from fastapi.responses import PlainTextResponse
-from starlette.responses import JSONResponse
+from fastapi.responses import PlainTextResponse, JSONResponse
+from dotenv import load_dotenv
+from starlette.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from fastapi.middleware.cors import CORSMiddleware
-from slowapi.errors import RateLimitExceeded
-from fastapi.responses import JSONResponse
-from slowapi.middleware import SlowAPIMiddleware
 import os
 import json
 import hmac
 import hashlib
+import logging
 
-from database import init_db, get_company_by_phone, get_db, SessionLocal
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+from database import init_db, get_company_by_phone, SessionLocal, get_db
 from whatsapp import handle_message
-from dotenv import load_dotenv
 
 load_dotenv()
 
-DEBUG_MODE = os.getenv("DEBUG_MODE", "true").lower() == "true"
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
+# DEBUG mode
+DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
+
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     yield
 
-limiter = Limiter(key_func=get_remote_address)
-
 app = FastAPI(lifespan=lifespan)
-
 app.state.limiter = limiter
 
-app.add_middleware(SlowAPIMiddleware)
-
-
+# Rate limit error handler
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request, exc):
-    return JSONResponse(status_code=429, content={"error": "Too many requests"})
-
+    return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
 
 @app.get("/")
 def home():
     return {"message": "WhatsApp AI Agent is running!"}
-
 
 @app.get("/webhook")
 async def verify_webhook(
@@ -55,9 +54,10 @@ async def verify_webhook(
     hub_verify_token: str = Query(..., alias="hub.verify_token"),
     phone_number_id: str = Query(...),
 ):
+    from database import Company
+
     if DEBUG_MODE:
-        print("⚠️ DEBUG_MODE ativo. Usando empresa fictícia para testes.")
-        from database import Company
+        logger.info("⚠️ DEBUG_MODE ativo. Usando empresa fictícia para testes.")
         company = Company(
             id=999,
             name="Debug Company",
@@ -72,6 +72,7 @@ async def verify_webhook(
     else:
         company = await get_company_by_phone(phone_number_id)
         if not company or not company.webhook_secret:
+            logger.warning("Company not found for phone_number_id: %s", phone_number_id)
             raise HTTPException(status_code=404, detail="Company not found")
 
     if hub_mode == "subscribe" and hub_verify_token == company.verify_token:
@@ -80,27 +81,23 @@ async def verify_webhook(
         raise HTTPException(status_code=403, detail="Invalid verification token")
 
 
-def verify_signature(app_secret: str, request_body: bytes, signature: str | None):
-    if DEBUG_MODE:
-        print("⚠️ DEBUG_MODE ativo. Ignorando verificação de assinatura.")
-        return
+def verify_signature(app_secret: str, request_body: bytes, signature: str):
+    if not DEBUG_MODE:
+        if not signature or "=" not in signature:
+            raise HTTPException(status_code=403, detail="Missing or invalid signature format")
 
-    if not signature or "=" not in signature:
-        raise HTTPException(status_code=403, detail="Missing or invalid signature format")
+        signature_hash = signature.split("=")[1]
+        expected_hash = hmac.new(
+            key=app_secret.encode("utf-8"),
+            msg=request_body,
+            digestmod=hashlib.sha256
+        ).hexdigest()
 
-    signature_hash = signature.split("=")[1]
-    expected_hash = hmac.new(
-        key=app_secret.encode("utf-8"),
-        msg=request_body,
-        digestmod=hashlib.sha256
-    ).hexdigest()
-
-    if not hmac.compare_digest(expected_hash, signature_hash):
-        raise HTTPException(status_code=403, detail="Invalid signature")
-
+        if not hmac.compare_digest(expected_hash, signature_hash):
+            raise HTTPException(status_code=403, detail="Invalid signature")
 
 @app.post("/webhook")
-@limiter.limit("5/second")  # 5 requisições por segundo por IP
+@limiter.limit("5/minute")
 async def receive_webhook(
     request: Request,
     x_hub_signature_256: str = Header(None),
@@ -109,40 +106,46 @@ async def receive_webhook(
 
     try:
         data = json.loads(raw_body)
-        phone_number_id = (
-            data["entry"][0]["changes"][0]["value"]
-            .get("metadata", {})
-            .get("phone_number_id")
-        )
-        if not phone_number_id:
-            raise ValueError("Missing phone_number_id")
-
-        company = await get_company_by_phone(phone_number_id)
-        if not company:
-            raise ValueError("Company not found")
-
-        verify_signature(company.webhook_secret, raw_body, x_hub_signature_256)
-
+        if not isinstance(data.get("entry"), list):
+            raise ValueError("Invalid structure: 'entry' must be a list.")
+        if not data["entry"][0].get("changes"):
+            raise ValueError("Invalid structure: 'changes' missing.")
+        if not data["entry"][0]["changes"][0].get("value", {}).get("messages"):
+            raise ValueError("Invalid structure: 'messages' missing.")
     except Exception as e:
-        print(f"🔐 Webhook validation failed: {e}")
-        raise HTTPException(status_code=403, detail="Unauthorized webhook request")
+        logger.error("Error parsing webhook data: %s", e)
+        raise HTTPException(status_code=400, detail="Invalid webhook structure.")
+
+    phone_number_id = (
+        data["entry"][0]["changes"][0]["value"]
+        .get("metadata", {})
+        .get("phone_number_id")
+    )
+
+    if not phone_number_id:
+        logger.warning("Missing phone_number_id in webhook data")
+        raise HTTPException(status_code=400, detail="Missing phone_number_id")
+
+    company = await get_company_by_phone(phone_number_id)
+    if not company or not company.webhook_secret:
+        logger.warning("Company not found for phone_number_id: %s", phone_number_id)
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    verify_signature(company.webhook_secret, raw_body, x_hub_signature_256)
 
     await handle_message(data)
     return JSONResponse({"status": "received"})
-
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
 
 @app.get("/ping-db")
 async def ping_db(session: AsyncSession = Depends(get_db)):
     try:
         await session.execute(text("SELECT 1"))
-        print("✅ DB connection OK")
+        logger.info("✅ DB connection OK")
         return {"db": "ok"}
     except Exception as e:
-        print("❌ DB error:", e)
+        logger.error("❌ DB error: %s", e)
         return {"db": "error", "detail": str(e)}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
