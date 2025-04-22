@@ -80,7 +80,11 @@ async def verify_webhook(
         raise HTTPException(status_code=403, detail="Invalid verification token")
 
 
-def verify_signature(app_secret: str, request_body: bytes, signature: str):
+def verify_signature(app_secret: str, request_body: bytes, signature: str | None):
+    if DEBUG_MODE:
+        print("⚠️ DEBUG_MODE ativo. Ignorando verificação de assinatura.")
+        return
+
     if not signature or "=" not in signature:
         raise HTTPException(status_code=403, detail="Missing or invalid signature format")
 
@@ -103,52 +107,29 @@ async def receive_webhook(
 ):
     raw_body = await request.body()
 
-    if len(raw_body) > 10000:  
-        raise HTTPException(status_code=413, detail="Payload too large")
-
     try:
         data = json.loads(raw_body)
-        entry = data.get("entry", [{}])[0]
-        change = entry.get("changes", [{}])[0]
-        metadata = change.get("value", {}).get("metadata", {})
-        messages = change.get("value", {}).get("messages", [])
-
-        phone_number_id = metadata.get("phone_number_id")
-
-        if not phone_number_id or not messages:
-            raise ValueError("Missing phone_number_id or messages")
-
-    except Exception as e:
-        print(f"Error parsing JSON: {e}")
-        raise HTTPException(status_code=400, detail="Invalid webhook structure")
-
-    if DEBUG_MODE:
-        print("⚠️ DEBUG_MODE ativo. Usando empresa fictícia para testes.")
-        from database import Company
-        company = Company(
-            id=999,
-            name="Debug Company",
-            phone_number_id="test-id",
-            ai_prompt="You are a test assistant.",
-            language="Portuguese",
-            tone="Informal",
-            whatsapp_token="test",
-            verify_token="test",
-            webhook_secret="test"
+        phone_number_id = (
+            data["entry"][0]["changes"][0]["value"]
+            .get("metadata", {})
+            .get("phone_number_id")
         )
-    else:
-        company = await get_company_by_phone(phone_number_id)
-        if not company or not company.webhook_secret:
-            print(f"Company not found for phone_number_id: {phone_number_id}")
-            raise HTTPException(status_code=404, detail="Company not found")
+        if not phone_number_id:
+            raise ValueError("Missing phone_number_id")
 
-        if not x_hub_signature_256:
-            raise HTTPException(status_code=401, detail="Missing signature")
+        company = await get_company_by_phone(phone_number_id)
+        if not company:
+            raise ValueError("Company not found")
 
         verify_signature(company.webhook_secret, raw_body, x_hub_signature_256)
 
+    except Exception as e:
+        print(f"🔐 Webhook validation failed: {e}")
+        raise HTTPException(status_code=403, detail="Unauthorized webhook request")
+
     await handle_message(data)
     return JSONResponse({"status": "received"})
+
 
 
 @app.get("/health")
