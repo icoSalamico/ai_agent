@@ -54,8 +54,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
+if not DEBUG_MODE:
+    app.add_middleware(HTTPSRedirectMiddleware)
 app.add_middleware(SecureHeadersMiddleware)
-app.add_middleware(HTTPSRedirectMiddleware)
 
 
 @app.exception_handler(RateLimitExceeded)
