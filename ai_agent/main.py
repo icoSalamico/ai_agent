@@ -17,7 +17,7 @@ import logging
 
 from database.core import init_db, SessionLocal
 from database.crud import get_company_by_phone, get_db
-from services.whatsapp import handle_message
+from .services.whatsapp import handle_message
 from dependencies.security import verify_admin_key
 from dependencies.security import verify_signature
 
