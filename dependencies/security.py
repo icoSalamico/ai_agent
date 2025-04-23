@@ -2,6 +2,7 @@ import os
 import hmac
 from fastapi import Request, Header, HTTPException, Depends
 from dotenv import load_dotenv
+import hashlib
 
 load_dotenv()
 
@@ -15,7 +16,12 @@ def verify_admin_key(x_api_key: str = Header(...)):
         raise HTTPException(status_code=403, detail="Invalid API key.")
 
 # Verify signature for incoming WhatsApp webhook requests
+DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() == "true"
+
 def verify_signature(app_secret: str, request_body: bytes, signature: str):
+    if DEBUG_MODE:
+        return  # 🔥 Skip in debug mode
+
     if not signature or "=" not in signature:
         raise HTTPException(status_code=403, detail="Missing or invalid signature format")
 
@@ -23,7 +29,7 @@ def verify_signature(app_secret: str, request_body: bytes, signature: str):
     expected_hash = hmac.new(
         key=app_secret.encode("utf-8"),
         msg=request_body,
-        digestmod="sha256"
+        digestmod=hashlib.sha256
     ).hexdigest()
 
     if not hmac.compare_digest(expected_hash, signature_hash):
