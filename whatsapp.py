@@ -83,7 +83,7 @@ async def send_reply(to: str, message: str, company):
     
     url = f"https://graph.facebook.com/v17.0/{company.phone_number_id}/messages"
     headers = {
-        "Authorization": f"Bearer {company.whatsapp_token}",
+        "Authorization": f"Bearer {company.decrypted_whatsapp_token}",
         "Content-Type": "application/json"
     }
     payload = {

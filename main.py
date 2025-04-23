@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
+from dependencies.security import verify_admin_key
 from fastapi import FastAPI, Request, Query, Header, HTTPException, Depends
 from fastapi.responses import PlainTextResponse, JSONResponse
 from dotenv import load_dotenv
+from secure import SecureHeaders
 from starlette.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -30,22 +32,37 @@ DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 # Rate limiting
 limiter = Limiter(key_func=get_remote_address)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     yield
 
+
 app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
+
+secure_headers = SecureHeaders()
+
+
+@app.middleware("http")
+async def set_secure_headers(request, call_next):
+    response = await call_next(request)
+    secure_headers.starlette(response)
+    return response
+
 
 # Rate limit error handler
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request, exc):
     return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
 
+
+
 @app.get("/")
 def home():
     return {"message": "WhatsApp AI Agent is running!"}
+
 
 @app.get("/webhook")
 async def verify_webhook(
@@ -71,7 +88,7 @@ async def verify_webhook(
         )
     else:
         company = await get_company_by_phone(phone_number_id)
-        if not company or not company.webhook_secret:
+        if not company or not company.decrypted_webhook_secret:
             logger.warning("Company not found for phone_number_id: %s", phone_number_id)
             raise HTTPException(status_code=404, detail="Company not found")
 
@@ -95,6 +112,7 @@ def verify_signature(app_secret: str, request_body: bytes, signature: str):
 
         if not hmac.compare_digest(expected_hash, signature_hash):
             raise HTTPException(status_code=403, detail="Invalid signature")
+
 
 @app.post("/webhook")
 @limiter.limit("5/minute")
@@ -127,16 +145,17 @@ async def receive_webhook(
         raise HTTPException(status_code=400, detail="Missing phone_number_id")
 
     company = await get_company_by_phone(phone_number_id)
-    if not company or not company.webhook_secret:
+    if not company or not company.decrypted_webhook_secret:
         logger.warning("Company not found for phone_number_id: %s", phone_number_id)
         raise HTTPException(status_code=404, detail="Company not found")
 
-    verify_signature(company.webhook_secret, raw_body, x_hub_signature_256)
+    verify_signature(company.decrypted_webhook_secret, raw_body, x_hub_signature_256)
 
     await handle_message(data)
     return JSONResponse({"status": "received"})
 
-@app.get("/ping-db")
+
+@app.get("/ping-db", dependencies=[Depends(verify_admin_key)])
 async def ping_db(session: AsyncSession = Depends(get_db)):
     try:
         await session.execute(text("SELECT 1"))
@@ -145,6 +164,7 @@ async def ping_db(session: AsyncSession = Depends(get_db)):
     except Exception as e:
         logger.error("❌ DB error: %s", e)
         return {"db": "error", "detail": str(e)}
+
 
 @app.get("/health")
 def health():

@@ -9,6 +9,8 @@ from sqlalchemy.sql import func
 from typing import AsyncGenerator
 import os
 from dotenv import load_dotenv
+from utils.crypto import decrypt_value
+
 
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -30,8 +32,20 @@ class Company(Base):
     ai_prompt = Column(String)
     language = Column(String, default="Portuguese")
     tone = Column(String, default="Formal")
-    business_hours = Column(String) # e.g. "09:00-18:00"
+    business_hours = Column(String)  # e.g. "09:00-18:00"
     webhook_secret = Column(String, nullable=True)
+
+    @property
+    def decrypted_whatsapp_token(self):
+        return decrypt_value(self.whatsapp_token)
+
+    @property
+    def decrypted_verify_token(self):
+        return decrypt_value(self.verify_token)
+
+    @property
+    def decrypted_webhook_secret(self):
+        return decrypt_value(self.webhook_secret)
 
 
 class Conversation(Base):
@@ -42,7 +56,7 @@ class Conversation(Base):
     user_message = Column(Text, nullable=False)
     ai_response = Column(Text, nullable=False)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     company_id = Column(Integer, ForeignKey("companies.id"))
     company = relationship("Company", backref="conversations")
 

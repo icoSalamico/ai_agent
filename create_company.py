@@ -1,7 +1,7 @@
 import asyncio
 from database import SessionLocal, Company
 from dotenv import load_dotenv
-
+from utils.crypto import encrypt_value
 
 load_dotenv()
 
@@ -15,17 +15,19 @@ async def create_company():
     language = input("Language (default: Portuguese): ") or "Portuguese"
     tone = input("Tone (default: Formal): ") or "Formal"
     business_hours = input("Business hours (e.g., 09:00-18:00): ")
+    webhook_secret = input("Webhook Secret: ")
 
     async with SessionLocal() as session:
         company = Company(
             name=name,
             phone_number_id=phone_number_id,
-            whatsapp_token=whatsapp_token,
-            verify_token=verify_token,
+            whatsapp_token=encrypt_value(whatsapp_token),
+            verify_token=encrypt_value(verify_token),
             ai_prompt=ai_prompt,
             language=language,
             tone=tone,
-            business_hours=business_hours
+            business_hours=business_hours,
+            webhook_secret=encrypt_value(webhook_secret)
         )
         session.add(company)
         await session.commit()
