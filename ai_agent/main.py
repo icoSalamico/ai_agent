@@ -54,7 +54,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
 app.add_middleware(SecureHeadersMiddleware)
-app.add_middleware(HTTPSRedirectMiddleware)
+if not DEBUG_MODE:
+    app.add_middleware(HTTPSRedirectMiddleware)
 app.include_router(admin_router, prefix="/admin")
 
 # Rate limit error handler
