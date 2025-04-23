@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from dependencies.security import verify_admin_key
 from fastapi import FastAPI, Request, Query, Header, HTTPException, Depends, Response
 from fastapi.responses import PlainTextResponse, JSONResponse
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
@@ -6,20 +7,19 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 import os
 import json
 import hmac
 import hashlib
 import logging
 
-from database.core import init_db, SessionLocal
-from database.crud import get_company_by_phone, get_db
-from .services.whatsapp import handle_message
-from dependencies.security import verify_admin_key
-from dependencies.security import verify_signature
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+from database import init_db, get_company_by_phone, SessionLocal, get_db
+from ai_agent.services.whatsapp import handle_message
+from ai_agent.routes.admin import router as admin_router
 
 from dotenv import load_dotenv
 
@@ -29,10 +29,11 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# DEBUG mode
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 
+# Rate limiting
 limiter = Limiter(key_func=get_remote_address)
-
 
 class SecureHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -45,29 +46,25 @@ class SecureHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     yield
 
-
 app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
-if not DEBUG_MODE:
-    app.add_middleware(HTTPSRedirectMiddleware)
 app.add_middleware(SecureHeadersMiddleware)
+app.add_middleware(HTTPSRedirectMiddleware)
+app.include_router(admin_router, prefix="/admin")
 
-
+# Rate limit error handler
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request, exc):
     return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
 
-
 @app.get("/")
 def home():
     return {"message": "WhatsApp AI Agent is running!"}
-
 
 @app.get("/webhook")
 async def verify_webhook(
@@ -76,7 +73,7 @@ async def verify_webhook(
     hub_verify_token: str = Query(..., alias="hub.verify_token"),
     phone_number_id: str = Query(...),
 ):
-    from database.models import Company
+    from database import Company
 
     if DEBUG_MODE:
         logger.info("⚠️ DEBUG_MODE ativo. Usando empresa fictícia para testes.")
@@ -102,6 +99,20 @@ async def verify_webhook(
     else:
         raise HTTPException(status_code=403, detail="Invalid verification token")
 
+def verify_signature(app_secret: str, request_body: bytes, signature: str):
+    if not DEBUG_MODE:
+        if not signature or "=" not in signature:
+            raise HTTPException(status_code=403, detail="Missing or invalid signature format")
+
+        signature_hash = signature.split("=")[1]
+        expected_hash = hmac.new(
+            key=app_secret.encode("utf-8"),
+            msg=request_body,
+            digestmod=hashlib.sha256
+        ).hexdigest()
+
+        if not hmac.compare_digest(expected_hash, signature_hash):
+            raise HTTPException(status_code=403, detail="Invalid signature")
 
 @app.post("/webhook")
 @limiter.limit("5/minute")
@@ -139,9 +150,9 @@ async def receive_webhook(
         raise HTTPException(status_code=404, detail="Company not found")
 
     verify_signature(company.decrypted_webhook_secret, raw_body, x_hub_signature_256)
+
     await handle_message(data)
     return JSONResponse({"status": "received"})
-
 
 @app.get("/ping-db", dependencies=[Depends(verify_admin_key)])
 async def ping_db(session: AsyncSession = Depends(get_db)):
@@ -152,7 +163,6 @@ async def ping_db(session: AsyncSession = Depends(get_db)):
     except Exception as e:
         logger.error("❌ DB error: %s", e)
         return {"db": "error", "detail": str(e)}
-
 
 @app.get("/health")
 def health():
