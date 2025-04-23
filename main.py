@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
 from dependencies.security import verify_admin_key
-from fastapi import FastAPI, Request, Query, Header, HTTPException, Depends
+from fastapi import FastAPI, Request, Query, Header, HTTPException, Depends, Response
 from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from dotenv import load_dotenv
-from secure import SecureHeaders
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -33,6 +34,18 @@ DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 limiter = Limiter(key_func=get_remote_address)
 
 
+class SecureHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = "default-src 'self'"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
@@ -41,22 +54,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
-
-secure_headers = SecureHeaders()
-
-
-@app.middleware("http")
-async def set_secure_headers(request, call_next):
-    response = await call_next(request)
-    secure_headers.starlette(response)
-    return response
+app.add_middleware(SecureHeadersMiddleware)
+app.add_middleware(HTTPSRedirectMiddleware)
 
 
 # Rate limit error handler
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request, exc):
     return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
-
 
 
 @app.get("/")
