@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from database.models import Conversation, Company
-from database.core import get_db
+from database.crud import get_db
 from dependencies.security import verify_admin_key
 
 router = APIRouter(
