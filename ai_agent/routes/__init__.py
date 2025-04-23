@@ -1,7 +1,7 @@
 from fastapi import APIRouter
-from app.routes.webhook import webhook_router
-from app.routes.health import health_router
-from app.routes.db import db_router
+from ai_agent.routes.webhook import webhook_router
+from ai_agent.routes.health import health_router
+from ai_agent.routes.db import db_router
 
 router = APIRouter()
 router.include_router(webhook_router)

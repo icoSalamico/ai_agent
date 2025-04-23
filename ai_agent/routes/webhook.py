@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Request, Header, HTTPException, Query
 from starlette.responses import PlainTextResponse, JSONResponse
 from database import get_company_by_phone
-from app.utils.signature import verify_signature
-from app.utils.debug import get_debug_company
+from ai_agent.utils.signature import verify_signature
+from ai_agent.utils.debug import get_debug_company
 from ai_agent.services.whatsapp import handle_message
 import json
 import os
