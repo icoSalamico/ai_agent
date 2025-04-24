@@ -55,6 +55,7 @@ class SecureHeadersMiddleware(BaseHTTPMiddleware):
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
             "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
             "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data:; "
         )
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
