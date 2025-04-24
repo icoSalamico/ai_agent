@@ -5,6 +5,7 @@ from dependencies.security import verify_admin_key
 from fastapi import FastAPI, Request, Query, Header, HTTPException, Depends, Response
 from fastapi.responses import PlainTextResponse, JSONResponse
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +15,7 @@ import json
 import hmac
 import hashlib
 import logging
+import sqladmin
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -71,6 +73,11 @@ if not DEBUG_MODE:
     app.add_middleware(HTTPSRedirectMiddleware)
 
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+app.mount(
+    "/admin/statics",
+    StaticFiles(directory=os.path.join(os.path.dirname(sqladmin.__file__), "statics")),
+    name="admin-statics",
+)
 setup_admin(app, engine)
 
 
