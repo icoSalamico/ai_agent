@@ -89,12 +89,6 @@ class ConversationAdmin(ModelView, model=Conversation):
 admin_auth_backend = AdminAuth(secret_key=SECRET_KEY)
 
 def setup_admin(app, engine):
-    admin = Admin(
-        app=app,
-        engine=engine,
-        authentication_backend=admin_auth_backend,
-        static_path="/admin/statics"  # ✅ Required for local CSS/JS
-    )
     admin = Admin(app=app, engine=engine, authentication_backend=admin_auth_backend)
     admin.add_view(CompanyAdmin)
     admin.add_view(ConversationAdmin)
