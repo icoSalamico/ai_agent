@@ -5,9 +5,9 @@ from dependencies.security import verify_admin_key
 from fastapi import FastAPI, Request, Query, Header, HTTPException, Depends, Response
 from fastapi.responses import PlainTextResponse, JSONResponse
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
-from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
+from starlette.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 import os
@@ -43,6 +43,20 @@ DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 # Rate limiting
 limiter = Limiter(key_func=get_remote_address)
 
+# ✅ Custom StaticFiles with CSP
+class CSPStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope) -> Response:
+        response = await super().get_response(path, scope)
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "style-src 'self' 'unsafe-inline' data: https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
+            "font-src 'self' https://fonts.gstatic.com data:; "
+            "img-src 'self' data: blob:;"
+        )
+        return response
+
+# Middleware for all routes
 class SecureHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response: Response = await call_next(request)
@@ -50,13 +64,6 @@ class SecureHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
-            "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
-            "font-src 'self' https://fonts.gstatic.com; "
-            "img-src 'self' data:; "
-        )
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
@@ -65,22 +72,26 @@ async def lifespan(app: FastAPI):
     await init_db()
     yield
 
-
 app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
 app.add_middleware(SecureHeadersMiddleware)
 app.include_router(prompt_test.router)
+
 if not DEBUG_MODE:
     app.add_middleware(HTTPSRedirectMiddleware)
 
-templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+# ✅ Mount admin statics with CSP
 app.mount(
     "/admin/statics",
-    StaticFiles(directory=os.path.join(os.path.dirname(sqladmin.__file__), "statics")),
+    CSPStaticFiles(directory=os.path.join(os.path.dirname(sqladmin.__file__), "statics")),
     name="admin-statics",
 )
-setup_admin(app, engine)
 
+# Templates
+templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+
+# Setup admin
+setup_admin(app, engine)
 
 # Rate limit error handler
 @app.exception_handler(RateLimitExceeded)
