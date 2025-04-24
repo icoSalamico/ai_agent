@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+
+from fastapi.templating import Jinja2Templates
 from dependencies.security import verify_admin_key
 from fastapi import FastAPI, Request, Query, Header, HTTPException, Depends, Response
 from fastapi.responses import PlainTextResponse, JSONResponse
@@ -18,8 +20,12 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from database import init_db, get_company_by_phone, SessionLocal, get_db
+from database.core import engine
 from ai_agent.services.whatsapp import handle_message
 from ai_agent.routes.admin import router as admin_router
+from ai_agent import admin
+from ai_agent.admin import setup_admin
+from ai_agent.routes import prompt_test
 
 from dotenv import load_dotenv
 
@@ -42,7 +48,12 @@ class SecureHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Content-Security-Policy"] = "default-src 'self'"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+            "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+            "font-src 'self' https://fonts.gstatic.com; "
+        )
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
@@ -51,12 +62,17 @@ async def lifespan(app: FastAPI):
     await init_db()
     yield
 
+
 app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
 app.add_middleware(SecureHeadersMiddleware)
+app.include_router(prompt_test.router)
 if not DEBUG_MODE:
     app.add_middleware(HTTPSRedirectMiddleware)
-app.include_router(admin_router, prefix="/admin")
+
+templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+setup_admin(app, engine)
+
 
 # Rate limit error handler
 @app.exception_handler(RateLimitExceeded)
