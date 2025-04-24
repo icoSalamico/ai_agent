@@ -58,7 +58,7 @@ class CSPStaticFiles(StaticFiles):
     
 def get_base_url():
     # You can set your public domain as an ENV var or infer from headers
-    return os.getenv("RAILWAY_PUBLIC_DOMAIN", "https://aiagent-production-a50f.up.railway.app")
+    return os.getenv("RAILWAY_PUBLIC_DOMAIN", "aiagent-production-a50f.up.railway.app")
 
 
 sqladmin.helpers.get_static_url_path = lambda name: f"{get_base_url()}/admin/statics/{name}"
