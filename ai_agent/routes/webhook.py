@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Header, HTTPException, Query
 from starlette.responses import PlainTextResponse, JSONResponse
-from database import get_company_by_phone
+from database.crud import get_company_by_phone, get_company_by_verify_token
 from ai_agent.utils.signature import verify_signature
 from ai_agent.utils.debug import get_debug_company
 from ai_agent.services.whatsapp import handle_message
@@ -16,12 +16,12 @@ async def verify_webhook(
     hub_mode: str = Query(..., alias="hub.mode"),
     hub_challenge: str = Query(..., alias="hub.challenge"),
     hub_verify_token: str = Query(..., alias="hub.verify_token"),
-    phone_number_id: str = Query(...),
 ):
-    company = get_debug_company() if DEBUG_MODE else await get_company_by_phone(phone_number_id)
-    if not company or hub_verify_token != company.decrypted_verify_token:
+    company = get_debug_company() if DEBUG_MODE else await get_company_by_verify_token(hub_verify_token)
+    if not company:
         raise HTTPException(status_code=403, detail="Invalid verification token")
     return PlainTextResponse(hub_challenge)
+
 
 
 @webhook_router.post("/webhook")
