@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Register Your Company</title>
+    </head>
+    <body>
+        <h2>Company Registration</h2>
+        <form action="/register-company" method="post">
+            <!-- Hidden field for the secret key -->
+            <input type="hidden" name="key" value="{{ key }}">
+
+            <label for="name">Company Name *</label><br>
+            <input type="text" id="name" name="name" placeholder="Your Company Name" required><br><br>
+
+            <label for="phone_number_id">Phone Number ID *</label><br>
+            <input type="text" id="phone_number_id" name="phone_number_id" placeholder="From Meta Business" required><br><br>
+
+            <label for="whatsapp_token">WhatsApp Permanent Token *</label><br>
+            <input type="text" id="whatsapp_token" name="whatsapp_token" placeholder="Access Token" required><br><br>
+
+            <label for="webhook_secret">Webhook Secret (App Secret) *</label><br>
+            <input type="text" id="webhook_secret" name="webhook_secret" placeholder="Meta App Secret" required><br><br>
+
+            <hr>
+
+            <h3>Optional AI Settings</h3>
+
+            <label for="ai_prompt">AI Prompt</label><br>
+            <input type="text" id="ai_prompt" name="ai_prompt" placeholder="Custom prompt for AI replies"><br><br>
+
+            <label for="tone">Tone</label><br>
+            <select id="tone" name="tone">
+                <option value="Formal" selected>Formal</option>
+                <option value="Informal">Informal</option>
+            </select><br><br>
+
+            <label for="language">Language</label><br>
+            <select id="language" name="language">
+                <option value="Portuguese" selected>Portuguese</option>
+                <option value="English">English</option>
+                <option value="Spanish">Spanish</option>
+            </select><br><br>
+
+            <button type="submit">Register Company</button>
+        </form>
+    </body>
+</html>

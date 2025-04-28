@@ -1,50 +1,54 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, Request, Form, Depends, HTTPException
+from fastapi.responses import RedirectResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
-from database import get_db
-from database.models import Company
-from utils.crypto import encrypt_value
-import uuid
+from starlette.responses import HTMLResponse
 import os
 
+from database.models import Company
+from database.core import get_db
+from utils.crypto import encrypt_value
+
 router = APIRouter()
+templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "../templates"))
 
-# --- SECURITY ---
-async def verify_admin_key(request: Request):
-    admin_key = request.headers.get("x-admin-key")
-    if not admin_key or admin_key != os.getenv("ADMIN_API_KEY", "admin123"):  # Define ADMIN_API_KEY in .env
-        raise HTTPException(status_code=401, detail="Unauthorized")
+# Secret key to protect the form
+COMPANY_REGISTRATION_KEY = os.getenv("COMPANY_REGISTRATION_KEY", "your_secret_key")
 
-# --- Request Body Model ---
-class CompanyCreateRequest(BaseModel):
-    name: str
-    phone_number_id: str
-    whatsapp_token: str
-    verify_token: str
-    webhook_secret: str
-    ai_prompt: str = "You are an assistant."
-    language: str = "Portuguese"
-    tone: str = "Friendly"
+@router.get("/register-company", response_class=HTMLResponse)
+async def register_company_form(request: Request, key: str = None):
+    if key != COMPANY_REGISTRATION_KEY:
+        raise HTTPException(status_code=403, detail="Invalid registration key.")
+    return templates.TemplateResponse("register_company.html", {"request": request, "key": key})
 
-# --- Route ---
-@router.post("/admin/create-company", dependencies=[Depends(verify_admin_key)])
-async def create_company(company_data: CompanyCreateRequest, session: AsyncSession = Depends(get_db)):
-    try:
-        new_company = Company(
-            name=company_data.name,
-            phone_number_id=company_data.phone_number_id,
-            whatsapp_token=encrypt_value(company_data.whatsapp_token),
-            verify_token=encrypt_value(company_data.verify_token),
-            webhook_secret=encrypt_value(company_data.webhook_secret),
-            ai_prompt=company_data.ai_prompt,
-            language=company_data.language,
-            tone=company_data.tone,
-        )
-        session.add(new_company)
-        await session.commit()
-        await session.refresh(new_company)
-        return {"message": "Company created successfully", "company_id": new_company.id}
-    
-    except Exception as e:
-        await session.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+@router.post("/register-company", response_class=HTMLResponse)
+async def register_company(
+    request: Request,
+    key: str = Form(...),
+    name: str = Form(...),
+    phone_number_id: str = Form(...),
+    whatsapp_token: str = Form(...),
+    webhook_secret: str = Form(...),
+    ai_prompt: str = Form(None),
+    tone: str = Form("Formal"),
+    language: str = Form("Portuguese"),
+    session: AsyncSession = Depends(get_db)
+):
+    if key != COMPANY_REGISTRATION_KEY:
+        raise HTTPException(status_code=403, detail="Invalid registration key.")
+
+    # Create and save the new company
+    new_company = Company(
+        name=name,
+        phone_number_id=phone_number_id,
+        whatsapp_token=encrypt_value(whatsapp_token),
+        webhook_secret=encrypt_value(webhook_secret),
+        ai_prompt=ai_prompt,
+        tone=tone,
+        language=language,
+    )
+    session.add(new_company)
+    await session.commit()
+
+    return templates.TemplateResponse("registration_success.html", {"request": request})
+
