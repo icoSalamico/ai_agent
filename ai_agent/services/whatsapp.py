@@ -83,7 +83,7 @@ async def send_reply(to: str, message: str, company):
         print(f"⚠️ DEBUG_MODE: Simulação de envio para {to}: {message}")
         return
     
-    url = f"https://graph.facebook.com/v17.0/{company.phone_number_id}/messages"
+    url = f"https://graph.facebook.com/v19.0/{company.phone_number_id}/messages"
     headers = {
         "Authorization": f"Bearer {company.decrypted_whatsapp_token}",
         "Content-Type": "application/json"
@@ -100,4 +100,5 @@ async def send_reply(to: str, message: str, company):
     async with httpx.AsyncClient() as client:
         response = await client.post(url, headers=headers, json=payload)
         if response.status_code != 200:
-            print(f"❌ Failed to send message: {response.status_code} - {response.text}")
+            error_detail = await response.aread()
+            print(f"❌ Failed to send message. Status: {response.status_code}, Error: {error_detail.decode()}")
