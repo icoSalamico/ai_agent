@@ -11,7 +11,7 @@ class Company(Base):
     name = Column(String)
     phone_number_id = Column(String, unique=True)
     whatsapp_token = Column(String)
-    verify_token = Column(String)
+    verify_token = Column(String, default="gAAAAABoD7Tfnjh_shD9FgJp2E5ks3dEhYPGTJpLSx4IT6l0rbNuslXsN2n9ktQGanG1JGasEgFVkomfZpGLy9qkneH8YpUOS8YSTiWL67ax5bG0DnlzJ20=")
     ai_prompt = Column(String)
     language = Column(String, default="Portuguese")
     tone = Column(String, default="Formal")
