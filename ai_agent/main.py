@@ -85,9 +85,6 @@ app.state.limiter = limiter
 app.add_middleware(SecureHeadersMiddleware)
 app.include_router(prompt_test.router)
 
-if not DEBUG_MODE:
-    app.add_middleware(HTTPSRedirectMiddleware)
-
 # ✅ Mount admin statics with CSP
 app.mount(
     "/admin/statics",
