@@ -25,7 +25,7 @@ async def verify_webhook(
     logger.info(f"  hub.mode = {hub_mode}")
     logger.info(f"  hub.challenge = {hub_challenge}")
     logger.info(f"  hub.verify_token = {hub_verify_token}")
-    logger.info(f"  phone_number_id = {}")
+
 
     # No longer mandatory to have phone_number_id at verification step
     if not hub_mode or not hub_challenge or not hub_verify_token:
