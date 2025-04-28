@@ -20,7 +20,6 @@ async def verify_webhook(
     hub_mode: str = Query(..., alias="hub.mode"),
     hub_challenge: str = Query(..., alias="hub.challenge"),
     hub_verify_token: str = Query(..., alias="hub.verify_token"),
-    phone_number_id: str = Query(None),  # ✅ Now optional
 ):
     logger.info("📨 Received webhook verification request with params:")
     logger.info(f"  hub.mode = {hub_mode}")
