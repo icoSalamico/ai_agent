@@ -6,7 +6,7 @@ from starlette.responses import HTMLResponse
 import os
 
 from database.models import Company
-from database.core import get_db
+from database.crud import get_db
 from utils.crypto import encrypt_value
 
 router = APIRouter()
