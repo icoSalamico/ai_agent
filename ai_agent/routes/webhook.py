@@ -28,7 +28,7 @@ async def verify_webhook(
     logger.info(f"  hub.verify_token = {hub_verify_token}")
     logger.info(f"  phone_number_id = {phone_number_id}")
 
-    if not hub_mode or not hub_challenge or not hub_verify_token or not phone_number_id:
+    if not hub_mode or not hub_challenge or not hub_verify_token:
         logger.warning("❌ Missing required verification query parameters.")
         raise HTTPException(status_code=400, detail="Missing query parameters.")
 
