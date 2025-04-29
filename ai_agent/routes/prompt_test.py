@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Request, Depends, Form
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter, Request, Depends, Form # type: ignore
+from fastapi.responses import HTMLResponse # type: ignore
+from fastapi.templating import Jinja2Templates # type: ignore
 from sqlalchemy.ext.asyncio import AsyncSession
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI # type: ignore
 from database.models import Company
 from sqlalchemy import select
 from database import get_db

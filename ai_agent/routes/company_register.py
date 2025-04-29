@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Request, Form, Depends, HTTPException
-from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter, Request, Form, Depends, HTTPException # type: ignore
+from fastapi.responses import RedirectResponse # type: ignore
+from fastapi.templating import Jinja2Templates # type: ignore
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import HTMLResponse
 import os
@@ -8,7 +8,7 @@ import os
 from database.models import Company
 from database.crud import get_db
 from utils.crypto import encrypt_value
-from utils.email import send_admin_notification
+from ai_agent.utils.email import send_admin_notification
 
 router = APIRouter()
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "../templates"))

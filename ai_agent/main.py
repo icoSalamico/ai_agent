@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
 
-from fastapi.templating import Jinja2Templates
+from fastapi.templating import Jinja2Templates # type: ignore
 from dependencies.security import verify_admin_key
-from fastapi import FastAPI, Request, Query, Header, HTTPException, Depends, Response
-from fastapi.responses import PlainTextResponse, JSONResponse
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from fastapi import FastAPI, Request, Query, Header, HTTPException, Depends, Response # type: ignore
+from fastapi.responses import PlainTextResponse, JSONResponse # type: ignore
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware # type: ignore
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
@@ -17,9 +17,9 @@ import hashlib
 import logging
 import sqladmin
 
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
+from slowapi import Limiter # type: ignore
+from slowapi.util import get_remote_address # type: ignore
+from slowapi.errors import RateLimitExceeded # type: ignore
 
 from database import init_db, get_company_by_phone, SessionLocal, get_db
 from database.core import engine
@@ -31,7 +31,7 @@ from ai_agent import admin
 from ai_agent.admin import setup_admin
 from ai_agent.routes import prompt_test
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv # type: ignore
 
 load_dotenv()
 

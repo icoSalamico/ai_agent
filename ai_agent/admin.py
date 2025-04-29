@@ -8,8 +8,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware import Middleware
 
 from database.models import Company, Conversation
-from itsdangerous import URLSafeSerializer
-from dotenv import load_dotenv
+from itsdangerous import URLSafeSerializer # type: ignore
+from dotenv import load_dotenv # type: ignore
 import os
 
 

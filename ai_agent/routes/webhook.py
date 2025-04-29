@@ -1,5 +1,5 @@
 # routes/webhook.py
-from fastapi import APIRouter, Request, Header, HTTPException, Query
+from fastapi import APIRouter, Request, Header, HTTPException, Query # type: ignore
 from starlette.responses import PlainTextResponse, JSONResponse
 import os
 import json

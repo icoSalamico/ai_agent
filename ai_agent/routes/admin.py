@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Form
+from fastapi import APIRouter, Depends, HTTPException, Form # type: ignore
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
 from database.models import Conversation, Company
 from database.crud import get_db
 from dependencies.security import verify_admin_key
-from pydantic import BaseModel
+from pydantic import BaseModel # type: ignore
 from typing import Optional, List
 from utils.crypto import encrypt_value
 

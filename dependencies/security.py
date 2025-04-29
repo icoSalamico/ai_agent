@@ -1,7 +1,7 @@
 import os
 import hmac
-from fastapi import Request, Header, HTTPException, Depends
-from dotenv import load_dotenv
+from fastapi import Request, Header, HTTPException, Depends # type: ignore
+from dotenv import load_dotenv # type: ignore
 import hashlib
 
 load_dotenv()
