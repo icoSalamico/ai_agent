@@ -8,6 +8,7 @@ import os
 from database.models import Company
 from database.crud import get_db
 from utils.crypto import encrypt_value
+from utils.email import send_admin_notification
 
 router = APIRouter()
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "../templates"))
@@ -49,6 +50,14 @@ async def register_company(
     )
     session.add(new_company)
     await session.commit()
+
+    await send_admin_notification({
+        "name": name,
+        "phone_number_id": phone_number_id,
+        "language": language,
+        "tone": tone,
+        "ai_prompt": ai_prompt
+    })
 
     return templates.TemplateResponse("registration_success.html", {"request": request})
 
