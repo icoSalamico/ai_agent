@@ -1,20 +1,22 @@
-from fastapi import APIRouter, Request, Form, Depends, HTTPException # type: ignore
-from fastapi.responses import RedirectResponse # type: ignore
-from fastapi.templating import Jinja2Templates # type: ignore
+from fastapi import APIRouter, Request, Form, Depends, HTTPException
+from fastapi.responses import RedirectResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import HTMLResponse
 import os
 
 from database.models import Company
-from database.crud import get_db
+from database.core import get_db
 from utils.crypto import encrypt_value
-from ai_agent.utils.email import send_admin_notification
 
 router = APIRouter()
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "../templates"))
 
 # Secret key to protect the form
 COMPANY_REGISTRATION_KEY = os.getenv("COMPANY_REGISTRATION_KEY", "your_secret_key")
+# Default shared credentials
+DEFAULT_WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
+DEFAULT_WEBHOOK_SECRET = os.getenv("WHATSAPP_APP_SECRET")
 
 @router.get("/register-company", response_class=HTMLResponse)
 async def register_company_form(request: Request, key: str = None):
@@ -27,9 +29,8 @@ async def register_company(
     request: Request,
     key: str = Form(...),
     name: str = Form(...),
+    display_number: str = Form(...),
     phone_number_id: str = Form(...),
-    whatsapp_token: str = Form(...),
-    webhook_secret: str = Form(...),
     ai_prompt: str = Form(None),
     tone: str = Form("Formal"),
     language: str = Form("Portuguese"),
@@ -38,26 +39,24 @@ async def register_company(
     if key != COMPANY_REGISTRATION_KEY:
         raise HTTPException(status_code=403, detail="Invalid registration key.")
 
-    # Create and save the new company
+    if not DEFAULT_WHATSAPP_TOKEN or not DEFAULT_WEBHOOK_SECRET:
+        raise HTTPException(status_code=500, detail="API credentials not configured.")
+
+    # Use default prompt if none provided
+    final_prompt = ai_prompt or "Você é um assistente virtual educado e objetivo."
+
+    # Create the company
     new_company = Company(
         name=name,
         phone_number_id=phone_number_id,
-        whatsapp_token=encrypt_value(whatsapp_token),
-        webhook_secret=encrypt_value(webhook_secret),
-        ai_prompt=ai_prompt,
+        whatsapp_token=encrypt_value(DEFAULT_WHATSAPP_TOKEN),
+        webhook_secret=encrypt_value(DEFAULT_WEBHOOK_SECRET),
+        display_number=display_number,
+        ai_prompt=final_prompt,
         tone=tone,
-        language=language,
+        language=language
     )
     session.add(new_company)
     await session.commit()
 
-    await send_admin_notification({
-        "name": name,
-        "phone_number_id": phone_number_id,
-        "language": language,
-        "tone": tone,
-        "ai_prompt": ai_prompt
-    })
-
     return templates.TemplateResponse("registration_success.html", {"request": request})
-
