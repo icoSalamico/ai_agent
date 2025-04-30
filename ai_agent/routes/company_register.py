@@ -18,6 +18,9 @@ COMPANY_REGISTRATION_KEY = os.getenv("COMPANY_REGISTRATION_KEY", "your_secret_ke
 DEFAULT_WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 DEFAULT_WEBHOOK_SECRET = os.getenv("WHATSAPP_APP_SECRET")
 
+DEFAULT_ZAPI_INSTANCE_ID = os.getenv("ZAPI_INSTANCE_ID")
+DEFAULT_ZAPI_API_TOKEN = os.getenv("ZAPI_API_TOKEN")
+
 @router.get("/register-company", response_class=HTMLResponse)
 async def register_company_form(request: Request, key: str = None):
     if key != COMPANY_REGISTRATION_KEY:
@@ -60,8 +63,8 @@ async def register_company(
 
     elif provider == "zapi":
         # Atualize com valores reais ou adicione campos ao formulário
-        new_company.zapi_instance_id = "example-instance-id"
-        new_company.zapi_token = "example-token"
+        new_company.zapi_instance_id = encrypt_value(DEFAULT_ZAPI_INSTANCE_ID)
+        new_company.zapi_token = encrypt_value(DEFAULT_ZAPI_API_TOKEN)
 
     session.add(new_company)
     await session.commit()

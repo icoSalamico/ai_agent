@@ -42,6 +42,14 @@ class Company(Base):
     @property
     def decrypted_webhook_secret(self):
         return decrypt_value(self.webhook_secret)
+    
+    @property
+    def decrypted_zapi_token(self):
+        return decrypt_value(self.zapi_token)
+    
+    @property
+    def decrypted_zapi_instance_id(self):
+        return decrypt_value(self.zapi_instance_id)
 
 
 class Conversation(Base):
