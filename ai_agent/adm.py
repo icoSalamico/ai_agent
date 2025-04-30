@@ -3,16 +3,13 @@ from sqlalchemy import select
 from sqladmin import Admin, ModelView
 from sqladmin.authentication import AuthenticationBackend
 from starlette.requests import Request
-
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware import Middleware
 
 from database.models import Company, Conversation
-from itsdangerous import URLSafeSerializer # type: ignore
-from dotenv import load_dotenv # type: ignore
+from itsdangerous import URLSafeSerializer  # type: ignore
+from dotenv import load_dotenv  # type: ignore
 import os
-
-
 
 # Load environment variables
 load_dotenv()
@@ -20,7 +17,7 @@ ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 SECRET_KEY = "secret"  # 🔐 Replace with a secure key from env
 
-
+# --- Authentication Setup ---
 class AdminAuth(AuthenticationBackend):
     def __init__(self, secret_key: str):
         self.serializer = URLSafeSerializer(secret_key)
@@ -52,26 +49,34 @@ class AdminAuth(AuthenticationBackend):
         except Exception:
             return False
 
-
+# --- Company Admin View ---
 class CompanyAdmin(ModelView, model=Company):
     column_list = [
         Company.id,
         Company.name,
+        Company.provider,
+        Company.display_number,
         Company.phone_number_id,
-        Company.whatsapp_token,
-        Company.verify_token,
-        Company.ai_prompt,
         Company.language,
         Company.tone,
         Company.business_hours,
+        Company.ai_prompt,
+        Company.verify_token,
+        Company.whatsapp_token,
         Company.webhook_secret,
+        Company.zapi_instance_id,
+        Company.zapi_token,
+        Company.active,
     ]
+
+    column_searchable_list = [Company.name, Company.display_number, Company.phone_number_id]
+    column_filters = [Company.provider]
 
     can_create = True
     can_edit = True
     can_delete = True
 
-
+# --- Conversation Admin View ---
 class ConversationAdmin(ModelView, model=Conversation):
     column_list = [
         Conversation.id,
@@ -85,7 +90,7 @@ class ConversationAdmin(ModelView, model=Conversation):
     can_edit = True
     can_delete = True
 
-
+# --- Admin setup ---
 admin_auth_backend = AdminAuth(secret_key=SECRET_KEY)
 
 def setup_admin(app, engine):

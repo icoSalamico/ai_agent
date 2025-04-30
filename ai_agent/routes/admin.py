@@ -1,144 +1,99 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy.exc import SQLAlchemyError
-from database.models import Conversation, Company
-from database.crud import get_db
-from dependencies.security import verify_admin_key
-from pydantic import BaseModel
-from typing import Optional, List
-from utils.crypto import encrypt_value
+from markupsafe import Markup
+from sqlalchemy import select
+from sqladmin import Admin, ModelView
+from sqladmin.authentication import AuthenticationBackend
+from starlette.requests import Request
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware import Middleware
 
-router = APIRouter(
-    prefix="/admin",
-    tags=["Admin"],
-    dependencies=[Depends(verify_admin_key)]
-)
+from database.models import Company, Conversation
+from itsdangerous import URLSafeSerializer  # type: ignore
+from dotenv import load_dotenv  # type: ignore
+import os
 
-@router.get("/companies/{company_id}/conversations")
-async def get_conversations(company_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Conversation)
-        .where(Conversation.company_id == company_id)
-        .order_by(Conversation.timestamp.desc())
-    )
-    conversations = result.scalars().all()
-    return [
-        {
-            "user_message": c.user_message,
-            "ai_response": c.ai_response,
-            "timestamp": c.timestamp
-        } for c in conversations
+# Load environment variables
+load_dotenv()
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+SECRET_KEY = "secret"  # 🔐 Replace with a secure key from env
+
+# --- Authentication Setup ---
+class AdminAuth(AuthenticationBackend):
+    def __init__(self, secret_key: str):
+        self.serializer = URLSafeSerializer(secret_key)
+
+    @property
+    def middlewares(self):
+        return [Middleware(SessionMiddleware, secret_key=self.serializer.secret_key)]
+
+    async def login(self, request: Request) -> bool:
+        form = await request.form()
+        username = form.get("username")
+        password = form.get("password")
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            request.session.update({"token": self.serializer.dumps({"user": username})})
+            return True
+        return False
+
+    async def logout(self, request: Request) -> bool:
+        request.session.clear()
+        return True
+
+    async def authenticate(self, request: Request) -> bool:
+        token = request.session.get("token")
+        if not token:
+            return False
+        try:
+            self.serializer.loads(token)
+            return True
+        except Exception:
+            return False
+
+# --- Company Admin View ---
+class CompanyAdmin(ModelView, model=Company):
+    column_list = [
+        Company.id,
+        Company.name,
+        Company.provider,
+        Company.display_number,
+        Company.phone_number_id,
+        Company.language,
+        Company.tone,
+        Company.business_hours,
+        Company.ai_prompt,
+        Company.verify_token,
+        Company.whatsapp_token,
+        Company.webhook_secret,
+        Company.zapi_instance_id,
+        Company.zapi_token,
+        Company.active,
     ]
 
-@router.get("/companies/{company_id}/status")
-async def get_company_status(company_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Company).where(Company.id == company_id))
-    company = result.scalar_one_or_none()
-    if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
+    column_searchable_list = [Company.name, Company.display_number, Company.phone_number_id]
+    column_filters = [Company.provider]
 
-    return {
-        "id": company.id,
-        "name": company.name,
-        "phone_number_id": company.phone_number_id,
-        "language": company.language,
-        "tone": company.tone,
-        "business_hours": company.business_hours,
-        "provider": company.provider,
-    }
+    can_create = True
+    can_edit = True
+    can_delete = True
 
-@router.get("/companies")
-async def list_companies(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Company).order_by(Company.id))
-    companies = result.scalars().all()
-    return [
-        {
-            "id": company.id,
-            "name": company.name,
-            "phone_number_id": company.phone_number_id,
-            "language": company.language,
-            "tone": company.tone,
-            "business_hours": company.business_hours,
-            "provider": company.provider,
-        } for company in companies
+# --- Conversation Admin View ---
+class ConversationAdmin(ModelView, model=Conversation):
+    column_list = [
+        Conversation.id,
+        Conversation.phone_number,
+        Conversation.user_message,
+        Conversation.ai_response,
+        Conversation.timestamp,
+        Conversation.company_id,
     ]
+    can_create = True
+    can_edit = True
+    can_delete = True
 
-class CompanyUpdate(BaseModel):
-    ai_prompt: Optional[str]
-    language: Optional[str]
-    tone: Optional[str]
-    business_hours: Optional[str]
+# --- Admin setup ---
+admin_auth_backend = AdminAuth(secret_key=SECRET_KEY)
 
-@router.patch("/companies/{company_id}")
-async def update_company(company_id: int, update: CompanyUpdate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Company).where(Company.id == company_id))
-    company = result.scalar_one_or_none()
-    if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
-
-    for field, value in update.dict(exclude_unset=True).items():
-        setattr(company, field, value)
-
-    await db.commit()
-    return {"message": "Company updated successfully"}
-
-@router.delete("/companies/{company_id}")
-async def delete_company(company_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Company).where(Company.id == company_id))
-    company = result.scalar_one_or_none()
-    if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
-
-    await db.delete(company)
-    await db.commit()
-    return {"message": "Company deleted successfully"}
-
-class CompanyCreate(BaseModel):
-    name: str
-    phone_number_id: str
-    display_number: str
-    provider: str = "meta"
-    whatsapp_token: Optional[str]
-    webhook_secret: Optional[str]
-    verify_token: Optional[str]
-    zapi_instance_id: Optional[str]
-    zapi_token: Optional[str]
-    ai_prompt: Optional[str]
-    language: Optional[str] = "Portuguese"
-    tone: Optional[str] = "Formal"
-    business_hours: Optional[str]
-
-@router.post("/companies")
-async def create_company(company: CompanyCreate, db: AsyncSession = Depends(get_db)):
-    new_company = Company(
-        name=company.name,
-        phone_number_id=company.phone_number_id,
-        display_number=company.display_number,
-        provider=company.provider,
-        ai_prompt=company.ai_prompt,
-        language=company.language,
-        tone=company.tone,
-        business_hours=company.business_hours,
-    )
-
-    if company.provider == "meta":
-        if not company.whatsapp_token or not company.webhook_secret or not company.verify_token:
-            raise HTTPException(status_code=400, detail="Missing Meta API credentials")
-        new_company.whatsapp_token = encrypt_value(company.whatsapp_token)
-        new_company.webhook_secret = encrypt_value(company.webhook_secret)
-        new_company.verify_token = encrypt_value(company.verify_token)
-
-    elif company.provider == "zapi":
-        if not company.zapi_instance_id or not company.zapi_token:
-            raise HTTPException(status_code=400, detail="Missing Z-API credentials")
-        new_company.zapi_instance_id = company.zapi_instance_id
-        new_company.zapi_token = company.zapi_token
-
-    db.add(new_company)
-    try:
-        await db.commit()
-        return {"message": "Company created successfully", "company_id": new_company.id}
-    except SQLAlchemyError:
-        await db.rollback()
-        raise HTTPException(status_code=500, detail="Error creating company")
+def setup_admin(app, engine):
+    admin = Admin(app=app, engine=engine, authentication_backend=admin_auth_backend)
+    admin.add_view(CompanyAdmin)
+    admin.add_view(ConversationAdmin)

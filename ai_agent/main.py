@@ -25,10 +25,9 @@ from database import init_db, get_company_by_phone, SessionLocal, get_db
 from database.core import engine
 from ai_agent.services.whatsapp import handle_message
 from ai_agent.routes import company_register
-from ai_agent.routes.admin import router as admin_router
 from ai_agent.routes.webhook import webhook_router
-from ai_agent import admin
-from ai_agent.admin import setup_admin
+from ai_agent import adm
+from ai_agent.adm import setup_admin
 from ai_agent.routes import prompt_test
 
 from dotenv import load_dotenv # type: ignore
