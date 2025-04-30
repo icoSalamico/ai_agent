@@ -8,7 +8,7 @@ from database import get_company_by_phone
 from ai_agent.utils.signature import verify_signature
 from ai_agent.utils.debug import get_debug_company
 from database.models import Conversation
-from ai_agent.services.ai import generate_ai_response
+from ai_agent.services.ai import generate_response
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.crud import get_db
 from whatsapp.provider_factory import get_provider
@@ -54,7 +54,7 @@ async def receive_webhook(
     if not DEBUG_MODE:
         verify_signature(company.decrypted_webhook_secret, raw_body, x_hub_signature_256)
 
-    ai_response = await generate_ai_response(company, user_message)
+    ai_response = await generate_response(company, user_message)
 
     db.add(Conversation(
         company_id=company.id,
