@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Form # type: ignore
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
 from database.models import Conversation, Company
 from database.crud import get_db
 from dependencies.security import verify_admin_key
-from pydantic import BaseModel # type: ignore
+from pydantic import BaseModel
 from typing import Optional, List
 from utils.crypto import encrypt_value
 
@@ -60,6 +60,7 @@ async def list_companies(db: AsyncSession = Depends(get_db)):
             "language": company.language,
             "tone": company.tone,
             "business_hours": company.business_hours,
+            "provider": company.provider,
         } for company in companies
     ]
 
@@ -96,27 +97,44 @@ async def delete_company(company_id: int, db: AsyncSession = Depends(get_db)):
 class CompanyCreate(BaseModel):
     name: str
     phone_number_id: str
-    whatsapp_token: str
-    verify_token: str
-    ai_prompt: str
+    display_number: str
+    provider: str = "meta"
+    whatsapp_token: Optional[str]
+    webhook_secret: Optional[str]
+    verify_token: Optional[str]
+    zapi_instance_id: Optional[str]
+    zapi_token: Optional[str]
+    ai_prompt: Optional[str]
     language: Optional[str] = "Portuguese"
     tone: Optional[str] = "Formal"
     business_hours: Optional[str]
-    webhook_secret: str
 
 @router.post("/companies")
 async def create_company(company: CompanyCreate, db: AsyncSession = Depends(get_db)):
     new_company = Company(
         name=company.name,
         phone_number_id=company.phone_number_id,
-        whatsapp_token=encrypt_value(company.whatsapp_token),
-        verify_token=encrypt_value(company.verify_token),
+        display_number=company.display_number,
+        provider=company.provider,
         ai_prompt=company.ai_prompt,
         language=company.language,
         tone=company.tone,
         business_hours=company.business_hours,
-        webhook_secret=encrypt_value(company.webhook_secret),
     )
+
+    if company.provider == "meta":
+        if not company.whatsapp_token or not company.webhook_secret or not company.verify_token:
+            raise HTTPException(status_code=400, detail="Missing Meta API credentials")
+        new_company.whatsapp_token = encrypt_value(company.whatsapp_token)
+        new_company.webhook_secret = encrypt_value(company.webhook_secret)
+        new_company.verify_token = encrypt_value(company.verify_token)
+
+    elif company.provider == "zapi":
+        if not company.zapi_instance_id or not company.zapi_token:
+            raise HTTPException(status_code=400, detail="Missing Z-API credentials")
+        new_company.zapi_instance_id = company.zapi_instance_id
+        new_company.zapi_token = company.zapi_token
+
     db.add(new_company)
     try:
         await db.commit()
