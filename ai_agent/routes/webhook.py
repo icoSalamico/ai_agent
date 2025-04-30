@@ -17,21 +17,6 @@ from whatsapp.provider_factory import get_provider
 webhook_router = APIRouter()
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 
-@webhook_router.get("/webhook")
-async def verify_webhook(
-    hub_mode: str = Query(..., alias="hub.mode"),
-    hub_challenge: str = Query(..., alias="hub.challenge"),
-    hub_verify_token: str = Query(..., alias="hub.verify_token"),
-):
-    print(f"🔵 VERIFY: hub_mode={hub_mode}, hub_challenge={hub_challenge}, hub_verify_token={hub_verify_token}")
-    company = get_debug_company()
-    if hub_mode == "subscribe" and hub_verify_token == company.decrypted_verify_token:
-        print("✅ Token matched. Returning challenge.")
-        return PlainTextResponse(hub_challenge)
-    else:
-        print("❌ Invalid token.")
-        raise HTTPException(status_code=403, detail="Invalid verification token")
-
 @webhook_router.post("/webhook")
 async def receive_webhook(
     request: Request,
@@ -41,25 +26,49 @@ async def receive_webhook(
     raw_body = await request.body()
     try:
         data = json.loads(raw_body)
-        phone_number_id = data["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"]
-        message = data["entry"][0]["changes"][0]["value"]["messages"][0]
-        from_number = message["from"]
-        user_message = message["text"]["body"]
+        
+        # Meta-style structure (has metadata)
+        if "entry" in data:
+            phone_number_id = data["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"]
+            message = data["entry"][0]["changes"][0]["value"]["messages"][0]
+            from_number = message["from"]
+            user_message = message["text"]["body"]
+            provider_type = "meta"
+        # Z-Api structure (has message directly)
+        elif "messages" in data:
+            message = data["messages"][0]
+            from_number = message["from"]
+            user_message = message["text"]["body"]
+            phone_number_id = None  # Not used here
+            provider_type = "zapi"
+        else:
+            raise ValueError("Unrecognized webhook payload format.")
+
     except Exception as e:
         print("📛 Erro ao processar o payload:")
         print(traceback.format_exc())
         raise HTTPException(status_code=400, detail=f"Invalid webhook structure: {e}")
 
-    company = get_debug_company() if DEBUG_MODE else await get_company_by_phone(phone_number_id)
+    # Lookup company
+    if DEBUG_MODE:
+        company = get_debug_company()
+    else:
+        if provider_type == "meta":
+            company = await get_company_by_phone(phone_number_id)
+        else:
+            company = await get_company_by_phone(from_number)
+    
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
-    if not DEBUG_MODE:
+    # Only Meta needs signature verification
+    if not DEBUG_MODE and provider_type == "meta":
         verify_signature(company.decrypted_webhook_secret, raw_body, x_hub_signature_256)
 
-    # Use a fake AI response in debug mode
+    # Get AI response
     ai_response = await generate_response(company, user_message) if not DEBUG_MODE else "🧪 [DEBUG] This is a test response."
 
+    # Save and respond
     if not DEBUG_MODE:
         db.add(Conversation(
             company_id=company.id,
@@ -80,4 +89,5 @@ async def receive_webhook(
         print("🧪 DEBUG_MODE enabled. Skipping DB insert, provider setup, and message sending.")
 
     return JSONResponse({"status": "received"})
+
 
