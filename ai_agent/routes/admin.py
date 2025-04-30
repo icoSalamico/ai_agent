@@ -45,6 +45,7 @@ async def get_company_status(company_id: int, db: AsyncSession = Depends(get_db)
         "language": company.language,
         "tone": company.tone,
         "business_hours": company.business_hours,
+        "provider": company.provider,
     }
 
 @router.get("/companies")
