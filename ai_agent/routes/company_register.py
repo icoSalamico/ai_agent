@@ -31,6 +31,7 @@ async def register_company(
     name: str = Form(...),
     display_number: str = Form(...),
     phone_number_id: str = Form(...),
+    provider: str = Form(...),
     ai_prompt: str = Form(None),
     tone: str = Form("Formal"),
     language: str = Form("Portuguese"),
@@ -39,23 +40,29 @@ async def register_company(
     if key != COMPANY_REGISTRATION_KEY:
         raise HTTPException(status_code=403, detail="Invalid registration key.")
 
-    if not DEFAULT_WHATSAPP_TOKEN or not DEFAULT_WEBHOOK_SECRET:
-        raise HTTPException(status_code=500, detail="API credentials not configured.")
-
-    # Use default prompt if none provided
     final_prompt = ai_prompt or "Você é um assistente virtual educado e objetivo."
 
-    # Create the company
     new_company = Company(
         name=name,
-        phone_number_id=phone_number_id,
-        whatsapp_token=encrypt_value(DEFAULT_WHATSAPP_TOKEN),
-        webhook_secret=encrypt_value(DEFAULT_WEBHOOK_SECRET),
         display_number=display_number,
+        phone_number_id=phone_number_id,
+        provider=provider,
         ai_prompt=final_prompt,
         tone=tone,
         language=language
     )
+
+    if provider == "meta":
+        if not DEFAULT_WHATSAPP_TOKEN or not DEFAULT_WEBHOOK_SECRET:
+            raise HTTPException(status_code=500, detail="Meta API credentials are not configured.")
+        new_company.whatsapp_token = encrypt_value(DEFAULT_WHATSAPP_TOKEN)
+        new_company.webhook_secret = encrypt_value(DEFAULT_WEBHOOK_SECRET)
+
+    elif provider == "zapi":
+        # Atualize com valores reais ou adicione campos ao formulário
+        new_company.zapi_instance_id = "example-instance-id"
+        new_company.zapi_token = "example-token"
+
     session.add(new_company)
     await session.commit()
 

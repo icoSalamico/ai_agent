@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database.core import Base
@@ -7,16 +7,29 @@ from utils.crypto import decrypt_value
 class Company(Base):
     __tablename__ = "companies"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
-    phone_number_id = Column(String, unique=True)
-    whatsapp_token = Column(String)
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    display_number = Column(String, nullable=True)
+    phone_number_id = Column(String, nullable=False)
     verify_token = Column(String, default="gAAAAABoD7Tfnjh_shD9FgJp2E5ks3dEhYPGTJpLSx4IT6l0rbNuslXsN2n9ktQGanG1JGasEgFVkomfZpGLy9qkneH8YpUOS8YSTiWL67ax5bG0DnlzJ20=")
-    ai_prompt = Column(String)
-    language = Column(String, default="Portuguese")
-    tone = Column(String, default="Formal")
     business_hours = Column(String)
-    webhook_secret = Column(String, nullable=True)
+    
+    # AI configuration
+    ai_prompt = Column(Text, nullable=True)
+    tone = Column(String, default="Formal")
+    language = Column(String, default="Portuguese")
+
+    # WhatsApp provider info
+    provider = Column(String, default="meta")  # meta or zapi
+    whatsapp_token = Column(Text, nullable=True)  # used for Meta
+    webhook_secret = Column(Text, nullable=True)  # used for Meta
+
+    # Z-API fields
+    zapi_instance_id = Column(String, nullable=True)
+    zapi_token = Column(String, nullable=True)
+
+    # Optional flags or tracking
+    active = Column(Boolean, default=True)
 
     @property
     def decrypted_whatsapp_token(self):
