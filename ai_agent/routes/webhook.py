@@ -3,6 +3,7 @@ from fastapi import APIRouter, Request, Header, HTTPException, Query, Depends
 from starlette.responses import PlainTextResponse, JSONResponse
 import os
 import json
+import traceback
 
 from database import get_company_by_phone
 from ai_agent.utils.signature import verify_signature
@@ -45,6 +46,8 @@ async def receive_webhook(
         from_number = message["from"]
         user_message = message["text"]["body"]
     except Exception as e:
+        print("📛 Erro ao processar o payload:")
+        print(traceback.format_exc())
         raise HTTPException(status_code=400, detail=f"Invalid webhook structure: {e}")
 
     company = get_debug_company() if DEBUG_MODE else await get_company_by_phone(phone_number_id)
@@ -54,22 +57,27 @@ async def receive_webhook(
     if not DEBUG_MODE:
         verify_signature(company.decrypted_webhook_secret, raw_body, x_hub_signature_256)
 
-    ai_response = await generate_response(company, user_message)
+    # Use a fake AI response in debug mode
+    ai_response = await generate_response(company, user_message) if not DEBUG_MODE else "🧪 [DEBUG] This is a test response."
 
-    db.add(Conversation(
-        company_id=company.id,
-        phone_number=from_number,
-        user_message=user_message,
-        ai_response=ai_response
-    ))
-    await db.commit()
+    if not DEBUG_MODE:
+        db.add(Conversation(
+            company_id=company.id,
+            phone_number=from_number,
+            user_message=user_message,
+            ai_response=ai_response
+        ))
+        await db.commit()
 
-    provider = get_provider(company.provider, {
-        "token": company.decrypted_whatsapp_token,
-        "phone_number_id": company.phone_number_id,
-        "instance_id": company.zapi_instance_id,
-        "api_token": company.zapi_token
-    })
-    await provider.send_message(phone_number=from_number, message=ai_response)
+        provider = get_provider(company.provider, {
+            "token": company.decrypted_whatsapp_token,
+            "phone_number_id": company.phone_number_id,
+            "instance_id": company.zapi_instance_id,
+            "api_token": company.zapi_token
+        })
+        await provider.send_message(phone_number=from_number, message=ai_response)
+    else:
+        print("🧪 DEBUG_MODE enabled. Skipping DB insert, provider setup, and message sending.")
 
     return JSONResponse({"status": "received"})
+
