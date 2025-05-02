@@ -1,6 +1,5 @@
 import httpx
 from whatsapp.base import WhatsAppProvider
-from database.models import Company
 import os
 
 class ZApiProvider(WhatsAppProvider):
@@ -16,16 +15,19 @@ class ZApiProvider(WhatsAppProvider):
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload)
             return response.json()
-        
 
 ZAPI_API_BASE = "https://api.z-api.io"
 
-
 async def create_zapi_instance(company_name: str, session_name: str, callback_base_url: str) -> dict:
+    master_token = os.getenv("ZAPI_MASTER_TOKEN")
+
+    if not master_token:
+        raise RuntimeError("❌ ZAPI_MASTER_TOKEN not found in environment variables")
+
     url = f"{ZAPI_API_BASE}/instances/integrator/on-demand"
     headers = {
         "Content-Type": "application/json",
-        "Client-Token": os.getenv("ZAPI_MASTER_TOKEN")  # From .env, NOT per company
+        "Client-Token": master_token
     }
     payload = {
         "name": company_name,
@@ -40,11 +42,19 @@ async def create_zapi_instance(company_name: str, session_name: str, callback_ba
     }
 
     async with httpx.AsyncClient() as client:
-        res = await client.post(url, json=payload, headers=headers)
-        res.raise_for_status()
-        data = res.json()
-        return {
-            "instance_id": data["id"],
-            "token": data["token"]
-        }
-
+        try:
+            print("📡 Sending Z-API instance creation request...")
+            print("🔐 Token being used:", master_token[:6] + "..." if master_token else "None")
+            res = await client.post(url, json=payload, headers=headers)
+            res.raise_for_status()
+            data = res.json()
+            print("✅ Z-API instance created:", data)
+            return {
+                "instance_id": data["id"],
+                "token": data["token"]
+            }
+        except httpx.HTTPStatusError as e:
+            print("❌ Z-API responded with an error:")
+            print("Response status:", e.response.status_code)
+            print("Response body:", e.response.text)
+            raise HTTPException(status_code=500, detail=f"Failed to create Z-API instance: {e.response.text}")
