@@ -60,19 +60,17 @@ async def view_company_settings(request: Request, token: str = Query(...), db: A
 async def update_company_settings(
     request: Request,
     company_id: int = Form(...),
-    token: str = Form(...),
     ai_prompt: str = Form(...),
     tone: str = Form(...),
     language: str = Form(...),
     active: str = Form(None),
+    token: str = Form(...),  # still used for redirect
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(Company).where(Company.id == company_id))
     company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
-    if decrypt_value(company.verify_token).strip() != token.strip():
-        raise HTTPException(status_code=403, detail="Invalid token")
 
     company.ai_prompt = ai_prompt
     company.tone = tone
@@ -81,6 +79,7 @@ async def update_company_settings(
 
     await db.commit()
     return RedirectResponse(url=f"/dashboard?token={token}", status_code=HTTP_303_SEE_OTHER)
+
 
 
 @admin_router.post("/notify-dashboard-url")
