@@ -16,6 +16,12 @@
                     <input type="hidden" name="company_id" value="{{ company.id }}">
                     <input type="hidden" name="token" value="{{ decrypt_token }}">
 
+                    {% if success %}
+                        <div class="alert alert-success" role="alert">
+                            ✅ Alterações salvas com sucesso!
+                        </div>
+                    {% endif %}
+                    
                     <div class="mb-3">
                         <label class="form-label">Prompt da IA</label>
                         <textarea class="form-control" name="ai_prompt" rows="3">{{ company.ai_prompt }}</textarea>

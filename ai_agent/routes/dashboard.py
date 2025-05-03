@@ -30,8 +30,14 @@ MY_COMPANY_TOKEN = os.getenv("MY_COMPANY_TOKEN")
 MY_COMPANY_PHONE_ID = os.getenv("MY_COMPANY_PHONE_ID")
 RAILWAY_PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN")
 
+
 @admin_router.get("/dashboard", response_class=HTMLResponse)
-async def view_company_settings(request: Request, token: str = Query(...), db: AsyncSession = Depends(get_db)):
+async def view_company_settings(
+    request: Request,
+    token: str = Query(...),
+    success: bool = Query(default=False),
+    db: AsyncSession = Depends(get_db)
+):
     print(f"🔑 Received token: '{token}'")
 
     result = await db.execute(select(Company))
@@ -46,7 +52,8 @@ async def view_company_settings(request: Request, token: str = Query(...), db: A
                     {
                         "request": request,
                         "company": company,
-                        "decrypted_token": decrypted
+                        "decrypt_token": decrypted,
+                        "success": success
                     }
                 )
         except Exception as e:
@@ -54,6 +61,7 @@ async def view_company_settings(request: Request, token: str = Query(...), db: A
             continue
 
     raise HTTPException(status_code=403, detail="Invalid or missing token")
+
 
 
 @admin_router.post("/dashboard/update", response_class=HTMLResponse)
@@ -78,7 +86,7 @@ async def update_company_settings(
     company.active = active == "on"
 
     await db.commit()
-    return RedirectResponse(url=f"/dashboard?token={company.decrypted_verify_token}", status_code=HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"/dashboard?token={company.decrypted_verify_token}&success=true", status_code=HTTP_303_SEE_OTHER)
 
 
 
