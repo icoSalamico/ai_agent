@@ -13,7 +13,7 @@ class Company(Base):
     phone_number_id = Column(String, nullable=False)
     verify_token = Column(String, default="gAAAAABoD7Tfnjh_shD9FgJp2E5ks3dEhYPGTJpLSx4IT6l0rbNuslXsN2n9ktQGanG1JGasEgFVkomfZpGLy9qkneH8YpUOS8YSTiWL67ax5bG0DnlzJ20=")
     business_hours = Column(String)
-    
+
     # AI configuration
     ai_prompt = Column(Text, nullable=True)
     tone = Column(String, default="Formal")
@@ -42,11 +42,11 @@ class Company(Base):
     @property
     def decrypted_webhook_secret(self):
         return decrypt_value(self.webhook_secret)
-    
+
     @property
     def decrypted_zapi_token(self):
         return decrypt_value(self.zapi_token)
-    
+
     @property
     def decrypted_zapi_instance_id(self):
         return decrypt_value(self.zapi_instance_id)
@@ -60,6 +60,17 @@ class Conversation(Base):
     user_message = Column(Text, nullable=False)
     ai_response = Column(Text, nullable=False)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     company_id = Column(Integer, ForeignKey("companies.id"))
     company = relationship("Company", backref="conversations")
+
+
+class ClientSession(Base):
+    __tablename__ = "client_sessions"
+
+    id = Column(Integer, primary_key=True)
+    phone_number = Column(String, nullable=False, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"))
+    company = relationship("Company", backref="client_sessions")
+    ai_enabled = Column(Boolean, default=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

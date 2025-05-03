@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import HTMLResponse
 import os
+import secrets
 
 from database.models import Company
 from database.crud import get_db
@@ -45,6 +46,9 @@ async def register_company(
 
     final_prompt = ai_prompt or "Você é um assistente virtual educado e objetivo."
 
+    # Generate and encrypt unique verify token
+    verify_token = secrets.token_urlsafe(32)
+
     new_company = Company(
         name=name,
         display_number=display_number,
@@ -52,7 +56,8 @@ async def register_company(
         provider=provider,
         ai_prompt=final_prompt,
         tone=tone,
-        language=language
+        language=language,
+        verify_token=encrypt_value(verify_token)
     )
 
     if provider == "meta":
@@ -76,4 +81,3 @@ async def register_company(
     await session.commit()
 
     return templates.TemplateResponse("registration_success.html", {"request": request})
-

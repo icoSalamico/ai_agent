@@ -1,6 +1,8 @@
 import httpx
 from whatsapp.base import WhatsAppProvider
 import os
+from fastapi import HTTPException
+
 
 class ZApiProvider(WhatsAppProvider):
     def __init__(self, instance_id: str, api_token: str):

@@ -1,0 +1,35 @@
+<!-- templates/dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Company Settings</title>
+    </head>
+    <body>
+        <h1>Company Dashboard: {{ company.name }}</h1>
+        
+        <form method="post" action="/dashboard/update">
+            <input type="hidden" name="company_id" value="{{ company.id }}">
+
+            <label for="ai_prompt">AI Prompt:</label><br>
+            <textarea name="ai_prompt" rows="4" cols="50">{{ company.ai_prompt }}</textarea><br><br>
+
+            <label for="tone">Tone:</label>
+            <select name="tone">
+                <option value="Formal" {% if company.tone == "Formal" %}selected{% endif %}>Formal</option>
+                <option value="Informal" {% if company.tone == "Informal" %}selected{% endif %}>Informal</option>
+            </select><br><br>
+
+            <label for="language">Language:</label>
+            <select name="language">
+                <option value="Portuguese" {% if company.language == "Portuguese" %}selected{% endif %}>Portuguese</option>
+                <option value="English" {% if company.language == "English" %}selected{% endif %}>English</option>
+            </select><br><br>
+
+            <label for="active">AI Enabled:</label>
+            <input type="checkbox" name="active" value="true" {% if company.active %}checked{% endif %}><br><br>
+
+            <button type="submit">Save Changes</button>
+        </form>
+    </body>
+</html>

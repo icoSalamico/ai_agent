@@ -26,6 +26,8 @@ from ai_agent.routes.webhook import webhook_router
 from ai_agent import adm
 from ai_agent.adm import setup_admin
 from ai_agent.routes import prompt_test
+from ai_agent.routes import dashboard
+
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -82,6 +84,7 @@ app.add_middleware(SecureHeadersMiddleware)
 app.include_router(prompt_test.router)
 app.include_router(webhook_router)
 app.include_router(company_register.router)
+app.include_router(dashboard.admin_router)
 
 # Admin com CSP
 app.mount(
