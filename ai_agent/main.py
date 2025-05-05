@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from dependencies.security import verify_admin_key
 from fastapi import FastAPI, Request, Depends, Response
 from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
@@ -92,6 +93,8 @@ app.mount(
     CSPStaticFiles(directory=os.path.join(os.path.dirname(sqladmin.__file__), "statics")),
     name="admin-statics",
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 
