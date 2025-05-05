@@ -10,7 +10,7 @@ from database.models import Company
 from database.crud import get_db
 from utils.crypto import encrypt_value
 from whatsapp.zapi import create_zapi_instance
-from routes.dashboard import send_dashboard_link
+from routes import dashboard  # Updated import
 
 router = APIRouter()
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "../templates"))
@@ -83,6 +83,6 @@ async def register_company(
     await session.commit()
 
     # Notify company with dashboard link
-    await send_dashboard_link(new_company)
+    await dashboard.send_dashboard_link(new_company)  # Adjusted reference
 
     return templates.TemplateResponse("registration_success.html", {"request": request})
