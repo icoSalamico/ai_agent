@@ -63,7 +63,6 @@ async def view_company_settings(
     raise HTTPException(status_code=403, detail="Invalid or missing token")
 
 
-
 @admin_router.post("/dashboard/update", response_class=HTMLResponse)
 async def update_company_settings(
     request: Request,
@@ -86,8 +85,18 @@ async def update_company_settings(
     company.active = active == "on"
 
     await db.commit()
-    return RedirectResponse(url=f"/dashboard?token={company.decrypted_verify_token}&success=true", status_code=HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"/dashboard?token={decrypt_value(company.verify_token)}&success=true", status_code=HTTP_303_SEE_OTHER)
 
+
+async def send_dashboard_link(company: Company):
+    if not company.verify_token:
+        raise ValueError("Company has no verify token")
+
+    dashboard_url = f"https://{RAILWAY_PUBLIC_DOMAIN}/dashboard?token={decrypt_value(company.verify_token).strip()}"
+    message = f"Este é o link para editar algumas configurações da sua empresa no nosso sistema: {dashboard_url}"
+
+    provider = MetaCloudProvider(token=MY_COMPANY_TOKEN, phone_number_id=MY_COMPANY_PHONE_ID)
+    await provider.send_message(phone_number=company.phone_number_id, message=message)
 
 
 @admin_router.post("/notify-dashboard-url")
@@ -96,13 +105,6 @@ async def notify_dashboard_url(company_id: int = Form(...), db: AsyncSession = D
     company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
-    if not company.verify_token:
-        raise HTTPException(status_code=400, detail="Company has no verify token")
 
-    dashboard_url = f"https://{RAILWAY_PUBLIC_DOMAIN}/dashboard?token={decrypt_value(company.verify_token).strip()}"
-    message = f"Este é o link para editar algumas configurações da sua empresa no nosso sistema: {dashboard_url}"
-
-    provider = MetaCloudProvider(token=MY_COMPANY_TOKEN, phone_number_id=MY_COMPANY_PHONE_ID)
-    await provider.send_message(phone_number=company.phone_number_id, message=message)
-
+    await send_dashboard_link(company)
     return {"detail": "Dashboard link sent to company."}

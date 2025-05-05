@@ -10,6 +10,7 @@ from database.models import Company
 from database.crud import get_db
 from utils.crypto import encrypt_value
 from whatsapp.zapi import create_zapi_instance
+from routes.dashboard import send_dashboard_link
 
 router = APIRouter()
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "../templates"))
@@ -27,6 +28,7 @@ async def register_company_form(request: Request, key: str = None):
     if key != COMPANY_REGISTRATION_KEY:
         raise HTTPException(status_code=403, detail="Invalid registration key.")
     return templates.TemplateResponse("register_company.html", {"request": request, "key": key})
+
 
 @router.post("/register-company", response_class=HTMLResponse)
 async def register_company(
@@ -79,5 +81,8 @@ async def register_company(
 
     session.add(new_company)
     await session.commit()
+
+    # Notify company with dashboard link
+    await send_dashboard_link(new_company)
 
     return templates.TemplateResponse("registration_success.html", {"request": request})
