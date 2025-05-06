@@ -4,6 +4,7 @@ from database.models import Company, ClientSession
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
 from utils.crypto import encrypt_value
+from typing import Optional
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
