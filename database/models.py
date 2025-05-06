@@ -11,7 +11,7 @@ class Company(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     display_number = Column(String, nullable=True)
-    phone_number_id = Column(String, nullable=False)
+    phone_number_id = Column(String, nullable=True)
     verify_token = Column(String, default="gAAAAABoD7Tfnjh_shD9FgJp2E5ks3dEhYPGTJpLSx4IT6l0rbNuslXsN2n9ktQGanG1JGasEgFVkomfZpGLy9qkneH8YpUOS8YSTiWL67ax5bG0DnlzJ20=")
     business_hours = Column(String)
 
