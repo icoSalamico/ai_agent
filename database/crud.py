@@ -37,3 +37,9 @@ async def get_client_session(company_id: int, phone_number: str) -> ClientSessio
             )
         )
         return result.scalar_one_or_none()
+
+
+async def get_company_by_display_number(phone: str, db: AsyncSession) -> Optional[Company]:
+    stmt = select(Company).where(Company.display_number == phone)
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()

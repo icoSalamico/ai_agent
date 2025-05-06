@@ -4,7 +4,7 @@ import os
 import json
 import traceback
 
-from database import get_company_by_phone
+from database import get_company_by_display_number, get_company_by_phone
 from ai_agent.utils.signature import verify_signature
 from ai_agent.utils.debug import get_debug_company
 from database.models import Conversation, ClientSession
@@ -85,7 +85,7 @@ async def receive_webhook(
         if provider_type == "meta":
             company = await get_company_by_phone(phone_number_id)
         else:
-            company = await get_company_by_phone(from_number)
+            company = await get_company_by_display_number(from_number)
 
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
