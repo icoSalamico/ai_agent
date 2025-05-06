@@ -46,7 +46,7 @@ async def receive_webhook(
             phone_number_id = None
             provider_type = "zapi"
 
-        # Z-API: formato com "event": "message"
+        # Z-API: com "event": "message"
         elif "event" in data and data["event"] == "message" and "message" in data:
             message = data["message"]
             from_number = message["from"]
@@ -54,8 +54,14 @@ async def receive_webhook(
             phone_number_id = None
             provider_type = "zapi"
 
-        # ✅ Z-API: formato real que você recebeu
-        elif data.get("type") == "ReceivedCallback" and "text" in data:
+        # ✅ Z-API: formato real + verificação de texto e origem
+        elif (
+            data.get("type") == "ReceivedCallback"
+            and data.get("fromMe") is False
+            and "text" in data
+            and isinstance(data["text"], dict)
+            and "message" in data["text"]
+        ):
             from_number = data["phone"]
             user_message = data["text"]["message"]
             phone_number_id = None
