@@ -35,7 +35,8 @@ async def register_company(
     key: str = Form(...),
     name: str = Form(...),
     display_number: str = Form(...),
-    provider: str = Form(...),
+    phone_number_id: str = Form(None),
+    provider: str = Form("zapi"),
     ai_prompt: str = Form(None),
     tone: str = Form("Formal"),
     language: str = Form("Portuguese"),
@@ -44,17 +45,22 @@ async def register_company(
     if key != COMPANY_REGISTRATION_KEY:
         raise HTTPException(status_code=403, detail="Invalid registration key.")
 
+    # ⚠️ Validação condicional para Meta
+    if provider == "meta" and not phone_number_id:
+        raise HTTPException(status_code=422, detail="Phone Number ID is required for Meta provider.")
+
     final_prompt = ai_prompt or "Você é um assistente virtual educado e objetivo."
     verify_token = secrets.token_urlsafe(32)
 
     new_company = Company(
         name=name,
         display_number=display_number,
-        provider="provider",
+        provider=provider,
         ai_prompt=final_prompt,
         tone=tone,
         language=language,
-        verify_token=encrypt_value(verify_token)
+        verify_token=encrypt_value(verify_token),
+        phone_number_id=phone_number_id  # Armazena mesmo se for None, conforme permitido pelo modelo
     )
 
     if provider == "meta":
@@ -67,7 +73,7 @@ async def register_company(
         if not BASE_DOMAIN:
             raise HTTPException(status_code=500, detail="RAILWAY_PUBLIC_DOMAIN not set.")
 
-        # 👇 MANUAL MODE: Get available Z-API instance not yet assigned to any company
+        # 👇 Modo Manual: Buscar instância disponível
         result = await session.execute(
             select(ZApiInstance).where(ZApiInstance.assigned == False)
         )
@@ -76,12 +82,11 @@ async def register_company(
         if not instance:
             raise HTTPException(status_code=500, detail="No available Z-API instance.")
 
-        # Mark instance as used
         instance.assigned = True
         new_company.zapi_instance_id = encrypt_value(instance.instance_id)
         new_company.zapi_token = encrypt_value(instance.token)
 
-        # ✅ AUTOMATIC MODE: Uncomment below when ready to auto-create instances
+        # ✅ Modo automático (comentado)
         """
         try:
             instance_info = await create_zapi_instance(
