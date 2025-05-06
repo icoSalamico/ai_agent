@@ -21,7 +21,7 @@ class Company(Base):
     language = Column(String, default="Portuguese")
 
     # WhatsApp provider info
-    provider = Column(String, default="meta")  # meta or zapi
+    provider = Column(String, default="zapi")  # meta or zapi
     whatsapp_token = Column(Text, nullable=True)  # used for Meta
     webhook_secret = Column(Text, nullable=True)  # used for Meta
 
