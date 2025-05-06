@@ -38,7 +38,7 @@ async def receive_webhook(
             user_message = message["text"]["body"]
             provider_type = "meta"
 
-        # Z-API formato com chave "messages"
+        # Z-API: formato clássico
         elif "messages" in data:
             message = data["messages"][0]
             from_number = message["from"]
@@ -46,11 +46,18 @@ async def receive_webhook(
             phone_number_id = None
             provider_type = "zapi"
 
-        # Z-API formato alternativo com "event": "message"
+        # Z-API: formato com "event": "message"
         elif "event" in data and data["event"] == "message" and "message" in data:
             message = data["message"]
             from_number = message["from"]
             user_message = message["text"]
+            phone_number_id = None
+            provider_type = "zapi"
+
+        # ✅ Z-API: formato real que você recebeu
+        elif data.get("type") == "ReceivedCallback" and "text" in data:
+            from_number = data["phone"]
+            user_message = data["text"]["message"]
             phone_number_id = None
             provider_type = "zapi"
 
@@ -142,3 +149,22 @@ async def delivery_status(request: Request):
     return {"status": "ok"}
 
 
+@webhook_router.post("/webhook/connected")
+async def connected_status(request: Request):
+    data = await request.json()
+    print("🔌 Connected status received:", json.dumps(data, indent=2))
+    return {"status": "ok"}
+
+
+@webhook_router.post("/webhook/disconnected")
+async def disconnected_status(request: Request):
+    data = await request.json()
+    print("❌ Disconnected status received:", json.dumps(data, indent=2))
+    return {"status": "ok"}
+
+
+@webhook_router.post("/webhook/status")
+async def message_status(request: Request):
+    data = await request.json()
+    print("📊 Message status received:", json.dumps(data, indent=2))
+    return {"status": "ok"}
