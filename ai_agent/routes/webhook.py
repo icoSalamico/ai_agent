@@ -54,18 +54,21 @@ async def receive_webhook(
             phone_number_id = None
             provider_type = "zapi"
 
-        # ✅ Z-API: formato real + verificação de texto e origem
-        elif (
-            data.get("type") == "ReceivedCallback"
-            and data.get("fromMe") is False
-            and "text" in data
-            and isinstance(data["text"], dict)
-            and "message" in data["text"]
-        ):
-            from_number = data["phone"]
-            user_message = data["text"]["message"]
-            phone_number_id = None
-            provider_type = "zapi"
+        # ✅ Z-API: formato real com verificação de origem e conteúdo
+        elif data.get("type") == "ReceivedCallback":
+            if (
+                data.get("fromMe") is False
+                and "text" in data
+                and isinstance(data["text"], dict)
+                and "message" in data["text"]
+            ):
+                from_number = data["phone"]
+                user_message = data["text"]["message"]
+                phone_number_id = None
+                provider_type = "zapi"
+            else:
+                # Ignorar mensagens sem texto ou enviadas pelo próprio bot
+                return JSONResponse({"status": "ignored", "reason": "non-user message or system notification"})
 
         else:
             raise ValueError("Unrecognized webhook payload format.")
