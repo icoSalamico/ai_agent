@@ -1,16 +1,13 @@
 # services/whatsapp.py
 
-import httpx
 import os
 import traceback
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future import select
-
 from ai_agent.services.ai import generate_response
 from database.core import SessionLocal
 from database.models import Conversation, Company
-from database.crud import get_company_by_phone
 from utils.persistence import save_conversation
+from whatsapp.provider_factory import get_provider
 
 DEBUG_MODE = os.getenv("DEBUG_MODE", "true").lower() == "true"
 
@@ -35,6 +32,9 @@ async def handle_message(data):
     try:
         changes = data["entry"][0]["changes"][0]["value"]
         phone_id = changes["metadata"]["phone_number_id"]
+        msg = changes["messages"][0]
+        user_text = msg["text"]["body"]
+        sender = msg["from"]
 
         async with SessionLocal() as session:
             # Get company
@@ -45,14 +45,10 @@ async def handle_message(data):
                 print("⚠️ Company not found for phone_number_id:", phone_id)
                 return
 
-            msg = changes["messages"][0]
-            user_text = msg["text"]["body"]
-            sender = msg["from"]
-
-            # Get recent messages for conversational context
+            # Get conversation history
             history = await get_recent_messages(session, sender, company.id)
 
-            # Generate AI reply using conversation history
+            # Generate AI response
             reply = await generate_response(
                 user_input=user_text,
                 prompt=company.ai_prompt,
@@ -61,7 +57,7 @@ async def handle_message(data):
                 history=history
             )
 
-            # Save the new conversation
+            # Save to database
             await save_conversation(
                 session,
                 phone_number=sender,
@@ -70,35 +66,18 @@ async def handle_message(data):
                 company_id=company.id
             )
 
-        # Send the reply back to the user
-        await send_reply(sender, reply, company)
+        # Send response
+        if DEBUG_MODE:
+            print(f"⚠️ DEBUG_MODE: Simulação de envio para {sender}: {reply}")
+        else:
+            provider = get_provider(company.provider, {
+                "token": company.decrypted_whatsapp_token,
+                "phone_number_id": company.phone_number_id,
+                "instance_id": company.decrypted_zapi_instance_id,
+                "api_token": company.decrypted_zapi_token
+            })
+            await provider.send_message(phone_number=sender, message=reply)
 
     except Exception as e:
         print(f"❌ Error handling message: {e}")
         traceback.print_exc()
-
-
-async def send_reply(to: str, message: str, company):
-    if DEBUG_MODE:
-        print(f"⚠️ DEBUG_MODE: Simulação de envio para {to}: {message}")
-        return
-    
-    url = f"https://graph.facebook.com/v19.0/{company.phone_number_id}/messages"
-    headers = {
-        "Authorization": f"Bearer {company.decrypted_whatsapp_token}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": to,
-        "type": "text",
-        "text": {
-            "body": message
-        }
-    }
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(url, headers=headers, json=payload)
-        if response.status_code != 200:
-            error_detail = await response.aread()
-            print(f"❌ Failed to send message. Status: {response.status_code}, Error: {error_detail.decode()}")

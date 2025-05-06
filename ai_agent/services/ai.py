@@ -3,24 +3,19 @@ import os
 import logging
 from dotenv import load_dotenv
 
-# Carrega o .env
 load_dotenv()
-
-# Logger
 logger = logging.getLogger(__name__)
-
-# Cliente OpenAI seguro
 
 def get_openai_client() -> OpenAI:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        raise ValueError("❌ OPENAI_API_KEY não está definida. Verifique o arquivo .env ou as variáveis de ambiente.")
+        raise ValueError("❌ OPENAI_API_KEY não está definida. Verifique o arquivo .env.")
     return OpenAI(api_key=api_key)
 
 def build_messages(user_input, prompt, language, tone, history=None):
     base = [{
         "role": "system",
-        "content": f"You are a helpful assistant. Respond in {language}, using a {tone} tone.\n\n{prompt}"
+        "content": f"You are a helpful assistant. Respond in {language}, using a {tone.lower()} tone.\n\n{prompt}"
     }]
     if history:
         base.extend(history)
@@ -35,6 +30,7 @@ async def generate_response(
     history: list = None
 ) -> str:
     try:
+        history = history or []
         client = get_openai_client()
         messages = build_messages(user_input, prompt, language, tone, history)
 
@@ -48,4 +44,4 @@ async def generate_response(
 
     except Exception:
         logger.exception("❌ Error generating response:")
-        return "Sorry, I couldn't process that right now."
+        return "Desculpe, não consegui processar sua mensagem no momento."
