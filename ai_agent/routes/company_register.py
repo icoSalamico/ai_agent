@@ -50,7 +50,7 @@ async def register_company(
     new_company = Company(
         name=name,
         display_number=display_number,
-        provider="zapi",
+        provider="provider",
         ai_prompt=final_prompt,
         tone=tone,
         language=language,
