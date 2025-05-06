@@ -35,7 +35,6 @@ async def register_company(
     key: str = Form(...),
     name: str = Form(...),
     display_number: str = Form(...),
-    phone_number_id: str = Form(...),
     provider: str = Form(...),
     ai_prompt: str = Form(None),
     tone: str = Form("Formal"),
