@@ -6,7 +6,7 @@ from starlette.requests import Request
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware import Middleware
 
-from database.models import Company, Conversation
+from database.models import Company, Conversation, ZApiInstance
 from itsdangerous import URLSafeSerializer  # type: ignore
 from dotenv import load_dotenv  # type: ignore
 import os
@@ -90,6 +90,22 @@ class ConversationAdmin(ModelView, model=Conversation):
     can_edit = True
     can_delete = True
 
+# --- ZApiInstance Admin View ---
+class ZApiInstanceAdmin(ModelView, model=ZApiInstance):
+    column_list = [
+        ZApiInstance.id,
+        ZApiInstance.instance_id,
+        ZApiInstance.token,
+        ZApiInstance.assigned,
+        ZApiInstance.company_id,
+    ]
+    column_searchable_list = [ZApiInstance.instance_id]
+    column_filters = [ZApiInstance.assigned]
+
+    can_create = True
+    can_edit = True
+    can_delete = True
+
 # --- Admin setup ---
 admin_auth_backend = AdminAuth(secret_key=SECRET_KEY)
 
@@ -97,3 +113,4 @@ def setup_admin(app, engine):
     admin = Admin(app=app, engine=engine, authentication_backend=admin_auth_backend)
     admin.add_view(CompanyAdmin)
     admin.add_view(ConversationAdmin)
+    admin.add_view(ZApiInstanceAdmin)

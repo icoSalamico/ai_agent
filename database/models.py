@@ -2,7 +2,8 @@ from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Bool
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database.core import Base
-from utils.crypto import decrypt_value
+from utils.crypto import decrypt_value, encrypt_value
+
 
 class Company(Base):
     __tablename__ = "companies"
@@ -74,3 +75,23 @@ class ClientSession(Base):
     company = relationship("Company", backref="client_sessions")
     ai_enabled = Column(Boolean, default=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class ZApiInstance(Base):
+    __tablename__ = "zapi_instances"
+
+    id = Column(Integer, primary_key=True)
+    instance_id = Column(String, nullable=False)
+    token = Column(String, nullable=False)
+    assigned = Column(Boolean, default=False)
+
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
+    company = relationship("Company", backref="zapi_instance")
+
+    @property
+    def decrypted_instance_id(self):
+        return decrypt_value(self.instance_id)
+
+    @property
+    def decrypted_token(self):
+        return decrypt_value(self.token)
