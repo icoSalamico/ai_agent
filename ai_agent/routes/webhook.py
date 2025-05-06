@@ -27,6 +27,8 @@ async def receive_webhook(
     raw_body = await request.body()
     try:
         data = json.loads(raw_body)
+        print("📨 Payload recebido:")
+        print(json.dumps(data, indent=2))
 
         # Meta (Cloud API)
         if "entry" in data:
@@ -36,11 +38,19 @@ async def receive_webhook(
             user_message = message["text"]["body"]
             provider_type = "meta"
 
-        # Z-API
+        # Z-API formato com chave "messages"
         elif "messages" in data:
             message = data["messages"][0]
             from_number = message["from"]
             user_message = message["text"]["body"]
+            phone_number_id = None
+            provider_type = "zapi"
+
+        # Z-API formato alternativo com "event": "message"
+        elif "event" in data and data["event"] == "message" and "message" in data:
+            message = data["message"]
+            from_number = message["from"]
+            user_message = message["text"]
             phone_number_id = None
             provider_type = "zapi"
 
@@ -68,7 +78,6 @@ async def receive_webhook(
         verify_signature(company.decrypted_webhook_secret, raw_body, x_hub_signature_256)
 
     if not DEBUG_MODE:
-        # Check if company or client has disabled the AI
         if not company.active:
             return JSONResponse({"status": "ignored", "reason": "company deactivated"})
 
@@ -119,7 +128,6 @@ async def receive_webhook(
             "api_token": company.decrypted_zapi_token
         })
         await provider.send_message(phone_number=from_number, message=ai_response)
-
     else:
         print("🧪 DEBUG_MODE enabled. Skipping DB insert, provider setup, and message sending.")
 
@@ -134,22 +142,3 @@ async def delivery_status(request: Request):
     return {"status": "ok"}
 
 
-@webhook_router.post("/webhook/connected")
-async def connected_status(request: Request):
-    data = await request.json()
-    print("🔌 Connected status received:", json.dumps(data, indent=2))
-    return {"status": "ok"}
-
-
-@webhook_router.post("/webhook/disconnected")
-async def disconnected_status(request: Request):
-    data = await request.json()
-    print("❌ Disconnected status received:", json.dumps(data, indent=2))
-    return {"status": "ok"}
-
-
-@webhook_router.post("/webhook/status")
-async def message_status(request: Request):
-    data = await request.json()
-    print("📊 Message status received:", json.dumps(data, indent=2))
-    return {"status": "ok"}
