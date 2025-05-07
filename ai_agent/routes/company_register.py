@@ -83,8 +83,14 @@ async def register_company(
             raise HTTPException(status_code=500, detail="No available Z-API instance.")
 
         instance.assigned = True
-        new_company.zapi_instance_id = encrypt_value(instance.instance_id)
-        new_company.zapi_token = encrypt_value(instance.token)
+
+        # ✅ Evita recriptografia
+        def is_encrypted(value: str) -> bool:
+            return isinstance(value, str) and value.startswith("gAAAAA")
+
+        new_company.zapi_instance_id = instance.instance_id if is_encrypted(instance.instance_id) else encrypt_value(instance.instance_id)
+        new_company.zapi_token = instance.token if is_encrypted(instance.token) else encrypt_value(instance.token)
+
 
         # ✅ Modo automático (comentado)
         """
