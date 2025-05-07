@@ -5,6 +5,8 @@ from fastapi import HTTPException
 
 from utils.crypto import decrypt_value
 
+ZAPI_CLIENT_TOKEN = os.getenv("ZAPI_CLIENT_TOKEN")
+
 class ZApiProvider(WhatsAppProvider):
     def __init__(self, instance_id: str, api_token: str):
         if not instance_id:
@@ -25,7 +27,7 @@ class ZApiProvider(WhatsAppProvider):
         }
         headers = {
             "Content-Type": "application/json",
-            "Client-Token": self.api_token  # ✅ No extra str() or decode needed
+            "Client-Token": ZAPI_CLIENT_TOKEN  # ✅ No extra str() or decode needed
         }
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers)
