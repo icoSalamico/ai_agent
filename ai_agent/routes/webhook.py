@@ -135,7 +135,12 @@ async def receive_webhook(
         if session and not session.ai_enabled:
             return JSONResponse({"status": "ignored", "reason": "AI disabled for this user"})
 
-    ai_response = await generate_response(company, user_message) if not DEBUG_MODE else "🧪 [DEBUG] This is a test response."
+    ai_response = await generate_response(
+        user_input=user_message,
+        prompt=company.ai_prompt or "Você é um assistente virtual educado e objetivo.",
+        language=company.language or "Portuguese",
+        tone=company.tone or "formal"
+    ) if not DEBUG_MODE else "🧪 [DEBUG] This is a test response."
 
     if not DEBUG_MODE:
         db.add(Conversation(
