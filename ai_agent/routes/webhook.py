@@ -151,15 +151,29 @@ async def receive_webhook(
         ))
         await db.commit()
 
+        # 🛠️ Diagnóstico extra
+        if not company.zapi_instance_id:
+            print("❗ company.zapi_instance_id está vazio ou None.")
+        if not company.zapi_token:
+            print("❗ company.zapi_token está vazio ou None.")
+
+        # 🛠️ Confirma se o decrypt está mesmo funcionando
+        try:
+            decrypted_instance = company.decrypted_zapi_instance_id
+            decrypted_token = company.decrypted_zapi_token
+        except Exception as e:
+            print("❗ Erro ao descriptografar:", str(e))
+            raise HTTPException(status_code=500, detail="Erro ao descriptografar credenciais Z-API")
+
         print("🔧 Provider setup:")
-        print("Instance ID:", company.decrypted_zapi_instance_id)
-        print("API Token:", company.decrypted_zapi_token)
+        print("Instance ID:", decrypted_instance)
+        print("API Token:", decrypted_token)
         
         provider = get_provider(company.provider, {
             "token": company.decrypted_whatsapp_token,
             "phone_number_id": company.phone_number_id,
-            "instance_id": company.decrypted_zapi_instance_id,
-            "api_token": company.decrypted_zapi_token
+            "instance_id": decrypted_instance,
+            "api_token": decrypted_token
         })
         await provider.send_message(phone_number=from_number, message=ai_response)
     else:
