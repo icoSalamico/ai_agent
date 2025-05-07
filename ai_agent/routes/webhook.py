@@ -3,6 +3,7 @@ from starlette.responses import JSONResponse
 import os
 import json
 import traceback
+import logging
 
 from database import get_company_by_display_number, get_company_by_phone
 from ai_agent.utils.signature import verify_signature
@@ -17,6 +18,8 @@ from sqlalchemy import select
 webhook_router = APIRouter()
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 
+logger = logging.getLogger(__name__)
+
 
 @webhook_router.post("/webhook")
 async def receive_webhook(
@@ -29,6 +32,10 @@ async def receive_webhook(
         data = json.loads(raw_body)
         print("📨 Payload recebido:")
         print(json.dumps(data, indent=2))
+
+        # 🔍 Dumpa o tipo dos campos
+        for key, value in data.items():
+            print(f"🔍 {key} => {type(value).__name__}")
 
         # Meta (Cloud API)
         if "entry" in data:
@@ -75,8 +82,9 @@ async def receive_webhook(
 
     except Exception as e:
         print("📎 Erro ao processar o payload:")
-        print(traceback.format_exc())
-        raise HTTPException(status_code=400, detail=f"Invalid webhook structure: {e}")
+        print(traceback.format_exc())  # mostra linha exata
+        logger.exception("💥 Unhandled Exception")  # registra no log
+        raise HTTPException(status_code=500, detail=f"Unhandled error: {str(e)}")
 
     # Get company
     if DEBUG_MODE:
