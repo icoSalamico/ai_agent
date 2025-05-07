@@ -1,0 +1,2 @@
+[console_scripts]
+piccolo = piccolo.main:main

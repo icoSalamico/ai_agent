@@ -1,0 +1,2 @@
+[console_scripts]
+admin_demo = piccolo_admin.example.app:main

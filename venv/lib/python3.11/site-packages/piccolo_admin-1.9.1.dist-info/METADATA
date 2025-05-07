@@ -1,0 +1,124 @@
+Metadata-Version: 2.1
+Name: piccolo_admin
+Version: 1.9.1
+Summary: A powerful and modern admin interface / CMS, powered by Piccolo and ASGI.
+Home-page: https://github.com/piccolo-orm/piccolo_admin
+Author: Daniel Townsend
+Author-email: dan@dantownsend.co.uk
+License: MIT
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Topic :: Database :: Front-Ends
+Classifier: Topic :: Internet :: WWW/HTTP :: Dynamic Content :: Content Management System
+Requires-Python: >=3.8.0
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: piccolo >=1.7.0
+Requires-Dist: piccolo-api >=1.5.2
+Requires-Dist: uvicorn
+Requires-Dist: aiofiles >=0.5.0
+Requires-Dist: Hypercorn
+Requires-Dist: targ >=0.1.9
+Requires-Dist: fastapi >=0.100.0
+Provides-Extra: all
+Requires-Dist: faker ==13.* ; extra == 'all'
+Requires-Dist: piccolo-api[s3] ; extra == 'all'
+Provides-Extra: faker
+Requires-Dist: faker ==13.* ; extra == 'faker'
+Provides-Extra: s3
+Requires-Dist: piccolo-api[s3] ; extra == 's3'
+
+![Logo](https://raw.githubusercontent.com/piccolo-orm/piccolo_admin/master/docs/logo_hero.png "Piccolo Admin Logo")
+
+# Piccolo Admin
+
+[![Documentation Status](https://readthedocs.org/projects/piccolo-admin/badge/?version=latest)](https://piccolo-admin.readthedocs.io/en/latest/?badge=latest)
+
+Piccolo Admin is a powerful admin interface / content management system for Python, built on top of Piccolo.
+
+![Screenshot](https://raw.githubusercontent.com/piccolo-orm/piccolo_admin/master/docs/images/screenshot.png "Screenshot")
+
+It was created at a design agency to serve the needs of customers who demand a high quality, beautiful admin interface for their websites. It's a modern alternative to tools like Wordpress and Django Admin.
+
+It's built using the latest technologies, with Vue.js on the front end, and a powerful REST backend.
+
+Some of it's standout features:
+
+* Powerful data filtering
+* Builtin security
+* Media support, both locally and in S3 compatible services
+* Dark mode support
+* CSV exports
+* Easily create custom forms
+* Works on mobile and desktop
+* Use standalone, or integrate it easily with ASGI apps like FastAPI, and Starlette
+* Multilingual out of box
+* Bulk actions, like updating and deleting data
+* Flexible UI - only show the columns you want your users to see
+
+## Try it
+
+[Try it online](https://demo1.piccolo-orm.com/) (username: piccolo, password: piccolo123).
+
+## Local Demo
+
+To run a demo locally, using Python 3.8 or above:
+
+```bash
+pip install piccolo_admin
+admin_demo
+```
+
+And then just launch `localhost:8000` in your browser.
+
+To see what happens behind the scenes, see `piccolo_admin/example/app.py`.
+
+In a few lines of code we are able to:
+
+-   Define our models
+-   Setup a database
+-   Create a REST API
+-   Setup a web server and admin interface
+
+## ASGI
+
+Since the admin is an ASGI app, you can either run it standalone like in the demo, or integrate it with a larger ASGI app such as FastAPI and Starlette.
+
+For example, using Starlette routes:
+
+```python
+import uvicorn
+from movies.endpoints import HomeEndpoint
+from movies.tables import Director, Movie
+from starlette.routing import Mount, Route, Router
+
+from piccolo_admin.endpoints import create_admin
+
+# The `allowed_hosts` argument is required when running under HTTPS. It's
+# used for additional CSRF defence.
+admin = create_admin([Director, Movie], allowed_hosts=["my_site.com"])
+
+
+router = Router(
+    [
+        Route(path="/", endpoint=HomeEndpoint),
+        Mount(path="/admin/", app=admin),
+    ]
+)
+
+
+if __name__ == "__main__":
+    uvicorn.run(router)
+
+```
+
+## Full docs
+
+Full documentation is available on [Read the docs](https://piccolo-admin.readthedocs.io/en/latest/).

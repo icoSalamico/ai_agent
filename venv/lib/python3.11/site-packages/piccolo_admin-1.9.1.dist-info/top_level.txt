@@ -1,0 +1,2 @@
+e2e
+piccolo_admin

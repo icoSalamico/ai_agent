@@ -1,0 +1,129 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>{% block title %}{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --background_color: {{ styles.background_color }};
+            --foreground_color: {{ styles.foreground_color }};
+            --text_color: {{ styles.text_color }};
+            --error_text_color: {{ styles.error_text_color }};
+            --button_color: {{ styles.button_color }};
+            --button_text_color: {{ styles.button_text_color }};
+            --link_color: {{ styles.link_color }};
+            --border_color: {{ styles.border_color }};
+        }
+
+        body {
+            background-color: var(--background_color);
+            font-family: "Open Sans", sans-serif;
+            color: var(--text_color);
+        }
+
+        div.content {
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        div.form_wrapper {
+            background-color: var(--foreground_color);
+            flex-grow: 0;
+            margin: 0 auto;
+            max-width: 25rem;
+            width: 90%;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+            padding: 2rem;
+            border-radius: 0.5rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+        }
+
+        a {
+            color: var(--link_color);
+            text-decoration: none;
+        }
+
+        p.error {
+            font-size: 0.9rem;
+            color: var(--error_text_color);
+        }
+
+        p.hint {
+            border-left: 3px solid var(--border_color);
+            font-size: 0.8rem;
+            box-sizing: border-box;
+            padding: 0.5rem;
+        }
+
+        label {
+            font-size: 0.85rem;
+            margin: 0.5rem 0;
+        }
+
+        input,
+        label,
+        select {
+            display: block;
+            width: 100%;
+        }
+
+        input,
+        button {
+            border-radius: 0.2rem;
+        }
+
+        input, select {
+            border: 1px solid var(--border_color);
+            padding: 0.5rem;
+            margin: 0.5rem 0 0.8rem;
+        }
+
+        textarea {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        button {
+            background-color: var(--button_color);
+            border: none;
+            color: var(--button_text_color);
+            cursor: pointer;
+            display: block;
+            font-size: 0.8rem;
+            letter-spacing: 0.05rem;
+            padding: 0.5rem;
+            text-transform: uppercase;
+            width: 100%;
+        }
+
+        div.captcha {
+            margin-bottom: 0.5rem;
+        }
+
+        div.qr_code {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <div class="form_wrapper">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</body>
+</html>

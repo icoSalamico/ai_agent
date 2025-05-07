@@ -1,0 +1,67 @@
+Metadata-Version: 2.1
+Name: piccolo_api
+Version: 1.5.2
+Summary: Utilities for using the Piccolo ORM in ASGI apps, plus essential ASGI middleware such as authentication and rate limiting.
+Home-page: https://github.com/piccolo-orm/piccolo_api
+Author: Daniel Townsend
+Author-email: dan@dantownsend.co.uk
+License: MIT
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Requires-Python: >=3.8.0
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: Jinja2 >=2.11.0
+Requires-Dist: piccolo[postgres] >=1.16.0
+Requires-Dist: pydantic[email] >=2.0
+Requires-Dist: python-multipart >=0.0.5
+Requires-Dist: fastapi >=0.100.0
+Requires-Dist: PyJWT >=2.0.0
+Requires-Dist: httpx >=0.20.0
+Provides-Extra: all
+Requires-Dist: pyotp ==2.9.0 ; extra == 'all'
+Requires-Dist: qrcode ==7.4.2 ; extra == 'all'
+Requires-Dist: cryptography ==43.0.1 ; extra == 'all'
+Requires-Dist: PyNaCl ==1.5.0 ; extra == 'all'
+Requires-Dist: boto3 ==1.* ; extra == 'all'
+Provides-Extra: authenticator
+Requires-Dist: pyotp ==2.9.0 ; extra == 'authenticator'
+Requires-Dist: qrcode ==7.4.2 ; extra == 'authenticator'
+Provides-Extra: cryptography
+Requires-Dist: cryptography ==43.0.1 ; extra == 'cryptography'
+Provides-Extra: pynacl
+Requires-Dist: PyNaCl ==1.5.0 ; extra == 'pynacl'
+Provides-Extra: s3
+Requires-Dist: boto3 ==1.* ; extra == 's3'
+
+![Logo](https://github.com/piccolo-orm/piccolo_api/raw/master/docs/logo_hero.png "Piccolo API Logo")
+
+![Tests](https://github.com/piccolo-orm/piccolo_api/actions/workflows/tests.yaml/badge.svg)
+![Release](https://github.com/piccolo-orm/piccolo_api/actions/workflows/release.yaml/badge.svg)
+[![Documentation Status](https://readthedocs.org/projects/piccolo-api/badge/?version=latest)](https://piccolo-api.readthedocs.io/en/latest/?badge=latest)
+[![PyPI](https://img.shields.io/pypi/v/piccolo-api?color=%2334D058&label=pypi)](https://pypi.org/project/piccolo-api/)
+[![codecov](https://codecov.io/gh/piccolo-orm/piccolo_api/branch/master/graph/badge.svg?token=JJ5326P7FT)](https://codecov.io/gh/piccolo-orm/piccolo_api)
+
+# Piccolo API
+
+Utilities for easily exposing [Piccolo](https://piccolo-orm.readthedocs.io/en/latest/) tables as REST endpoints in ASGI apps, such as [Starlette](https://www.starlette.io) and [FastAPI](https://fastapi.tiangolo.com/).
+
+Includes a bunch of useful ASGI middleware:
+
+- Session Auth
+- Token Auth
+- Rate Limiting
+- CSRF
+- Content Security Policy (CSP)
+- And more
+
+It also contains excellent Pydantic support, allowing you to easily create Pydantic models based on your Piccolo tables.
+
+You can read the docs [here](https://piccolo-api.readthedocs.io/en/latest/).
