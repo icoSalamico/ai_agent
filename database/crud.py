@@ -44,3 +44,14 @@ async def get_company_by_display_number(phone: str, db: AsyncSession) -> Optiona
     stmt = select(Company).where(Company.display_number == phone)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def get_company_by_instance_id(instance_id: str, db: AsyncSession) -> Optional[Company]:
+    result = await db.execute(
+        select(Company).where(Company.zapi_instance_id.isnot(None))
+    )
+    companies = result.scalars().all()
+    for company in companies:
+        if company.decrypted_zapi_instance_id == instance_id:
+            return company
+    return None
