@@ -51,7 +51,12 @@ async def get_company_by_instance_id(instance_id: str, db: AsyncSession) -> Opti
         select(Company).where(Company.zapi_instance_id.isnot(None))
     )
     companies = result.scalars().all()
+
     for company in companies:
-        if company.decrypted_zapi_instance_id == instance_id:
+        decrypted_id = company.decrypted_zapi_instance_id
+        print(f"🧪 Comparando {decrypted_id} == {instance_id}")
+        if decrypted_id == instance_id:
             return company
+
+    print("❌ Nenhuma empresa encontrada com instance_id correspondente.")
     return None
