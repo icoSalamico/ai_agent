@@ -13,9 +13,10 @@ class ZApiProvider(WhatsAppProvider):
         
         from utils.crypto import decrypt_value
 
-        self.api_token = api_token
+        self.api_token = decrypt_value(api_token)
+        self.instance_id = instance_id
 
-        self.base_url = f"https://api.z-api.io/instances/{instance_id}/token/{decrypt_value(api_token)}"
+        self.base_url = f"https://api.z-api.io/instances/{self.instance_id}/token/{self.api_token}"
 
     async def send_message(self, phone_number: str, message: str) -> dict:
         url = f"{self.base_url}/send-messages"
