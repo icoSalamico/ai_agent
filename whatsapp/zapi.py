@@ -6,6 +6,11 @@ from fastapi import HTTPException
 class ZApiProvider(WhatsAppProvider):
     def __init__(self, instance_id: str, api_token: str):
         # Ensure instance_id and api_token are not encrypted at this point
+        if not instance_id:
+            raise ValueError("ZApiProvider: instance_id is None")
+        if not api_token:
+            raise ValueError("ZApiProvider: api_token is None")
+        
         from utils.crypto import decrypt_value
 
         self.base_url = f"https://api.z-api.io/instances/{decrypt_value(instance_id)}/token/{decrypt_value(api_token)}"

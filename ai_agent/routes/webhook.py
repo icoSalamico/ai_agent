@@ -151,6 +151,10 @@ async def receive_webhook(
         ))
         await db.commit()
 
+        print("🔧 Provider setup:")
+        print("Instance ID:", company.decrypted_zapi_instance_id)
+        print("API Token:", company.decrypted_zapi_token)
+        
         provider = get_provider(company.provider, {
             "token": company.decrypted_whatsapp_token,
             "phone_number_id": company.phone_number_id,
