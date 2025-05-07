@@ -96,8 +96,9 @@ async def register_company(
 
     if provider == "zapi":
         instance_id = decrypt_value(new_company.zapi_instance_id)
+        api_token = decrypt_value(new_company.zapi_token)
         try:
-            qrcode = await get_instance_qrcode(instance_id)
+            qrcode = await get_instance_qrcode(instance_id, api_token)
         except Exception as e:
             print("⚠️ Failed to fetch QR Code:", str(e))
             qrcode = None
