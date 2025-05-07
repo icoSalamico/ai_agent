@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, Header, HTTPException, Depends
 from starlette.responses import JSONResponse
+from sqlalchemy import select
 import os
 import json
 import traceback
@@ -13,7 +14,8 @@ from ai_agent.services.ai import generate_response
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.crud import get_db
 from whatsapp.provider_factory import get_provider
-from sqlalchemy import select
+from utils.crypto import decrypt_value
+
 
 webhook_router = APIRouter()
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
@@ -170,10 +172,10 @@ async def receive_webhook(
         print("API Token:", decrypted_token)
         
         provider = get_provider(company.provider, {
-            "token": company.decrypted_whatsapp_token,
+            "token": decrypt_value(company.whatsapp_token),
             "phone_number_id": company.phone_number_id,
-            "instance_id": decrypted_instance,
-            "api_token": decrypted_token
+            "instance_id": decrypt_value(company.zapi_instance_id),
+            "api_token": decrypt_value(company.zapi_token)
         })
         await provider.send_message(phone_number=from_number, message=ai_response)
     else:
