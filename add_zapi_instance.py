@@ -1,5 +1,8 @@
 import asyncio
 import os
+from dotenv import load_dotenv  # ✅ Adicione isso
+
+load_dotenv()  # ✅ Carrega o .env da raiz do projeto
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -7,6 +10,7 @@ from sqlalchemy.future import select
 from database.core import async_session
 from database.models import ZApiInstance
 from utils.crypto import encrypt_value
+
 
 
 def is_encrypted(value: str) -> bool:
