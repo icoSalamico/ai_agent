@@ -2,6 +2,11 @@ from whatsapp.meta_cloud import MetaCloudProvider
 from whatsapp.zapi import ZApiProvider
 from utils.crypto import decrypt_value
 
+
+def is_encrypted(value: str | None) -> bool:
+    return isinstance(value, str) and value.startswith("gAAAAA")
+
+
 def get_provider(provider_name: str, config: dict):
     provider_name = provider_name.strip().lower()
 
@@ -12,15 +17,21 @@ def get_provider(provider_name: str, config: dict):
         )
 
     elif provider_name == "zapi":
-        decrypted_instance_id = decrypt_value(config["instance_id"])
-        decrypted_api_token = decrypt_value(config["api_token"])
+        instance_id = config["instance_id"]
+        api_token = config["api_token"]
 
-        if not decrypted_instance_id or not decrypted_api_token:
+        # ✅ Descriptografa apenas se necessário
+        if is_encrypted(instance_id):
+            instance_id = decrypt_value(instance_id)
+        if is_encrypted(api_token):
+            api_token = decrypt_value(api_token)
+
+        if not instance_id or not api_token:
             raise ValueError("❌ Failed to decrypt Z-API credentials in get_provider")
 
         return ZApiProvider(
-            instance_id=decrypted_instance_id,
-            api_token=decrypted_api_token  # já descriptografado aqui
+            instance_id=instance_id,
+            api_token=api_token
         )
 
     else:
