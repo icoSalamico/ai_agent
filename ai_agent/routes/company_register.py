@@ -104,6 +104,11 @@ async def register_company(
 
     await send_dashboard_link(new_company)
 
+    print("✅ Instância ID (descriptografada):", decrypt_value(new_company.zapi_instance_id))
+    print("✅ QR Code final:", qrcode)
+    print("📸 QR CODE RETORNADO:", qrcode)
+    print("👀 QRCode tipo:", type(qrcode))
+    print("🔗 QRCode valor:", qrcode)   
     return templates.TemplateResponse("registration_success.html", {
         "request": request,
         "qrcode": qrcode
