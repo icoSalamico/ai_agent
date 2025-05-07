@@ -7,8 +7,12 @@ fernet = Fernet(FERNET_KEY.encode())
 def encrypt_value(value: str) -> str:
     return fernet.encrypt(value.encode()).decode()
 
-def decrypt_value(value: str) -> str:
+
+def decrypt_value(value: str | None) -> str | None:
+    if not value:
+        return None
+
     try:
         return fernet.decrypt(value.encode()).decode()
-    except InvalidToken:
-        raise ValueError("❌ Erro ao descriptografar o valor. Verifique se a FERNET_SECRET_KEY está correta.")
+    except (InvalidToken, AttributeError, TypeError):
+        return None

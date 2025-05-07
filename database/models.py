@@ -34,23 +34,23 @@ class Company(Base):
 
     @property
     def decrypted_whatsapp_token(self):
-        return decrypt_value(self.whatsapp_token)
+        return decrypt_value(self.whatsapp_token) if self.whatsapp_token else None
 
     @property
     def decrypted_verify_token(self):
-        return decrypt_value(self.verify_token)
+        return decrypt_value(self.verify_token) if self.verify_token else None
 
     @property
     def decrypted_webhook_secret(self):
-        return decrypt_value(self.webhook_secret)
+        return decrypt_value(self.webhook_secret) if self.webhook_secret else None
 
     @property
     def decrypted_zapi_token(self):
-        return decrypt_value(self.zapi_token)
+        return decrypt_value(self.zapi_token) if self.zapi_token else None
 
     @property
     def decrypted_zapi_instance_id(self):
-        return decrypt_value(self.zapi_instance_id)
+        return decrypt_value(self.zapi_instance_id) if self.zapi_instance_id else None
 
 
 class Conversation(Base):
@@ -90,8 +90,8 @@ class ZApiInstance(Base):
 
     @property
     def decrypted_instance_id(self):
-        return decrypt_value(self.instance_id)
+        return decrypt_value(self.instance_id) if self.instance_id else None
 
     @property
     def decrypted_token(self):
-        return decrypt_value(self.token)
+        return decrypt_value(self.token) if self.token else None
