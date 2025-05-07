@@ -29,7 +29,7 @@ class ZApiProvider(WhatsAppProvider):
             "Client-Token": self.api_token
         }
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=payload)
+            response = await client.post(url, json=payload, headers=headers)  # ✅ headers agora incluído
             if response.status_code != 200:
                 print(f"❌ Failed to send message to {phone_number}")
                 print("URL:", url)
