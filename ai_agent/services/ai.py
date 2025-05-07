@@ -2,14 +2,14 @@ import os
 import logging
 from openai import OpenAI
 from dotenv import load_dotenv
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict
 
 # Carrega variáveis de ambiente
 load_dotenv()
 
 # Configura logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)  # ou DEBUG em desenvolvimento
+logger.setLevel(logging.INFO)
 
 def get_openai_client() -> OpenAI:
     api_key = os.getenv("OPENAI_API_KEY")
@@ -48,7 +48,7 @@ async def generate_response(
         logger.debug("🧠 Enviando mensagens para OpenAI:")
         logger.debug(messages)
 
-        completion  client.chat.completions.create(
+        completion = client.chat.completions.create(  # <-- corrigido aqui
             model="gpt-4o",
             messages=messages,
             temperature=0.7,
