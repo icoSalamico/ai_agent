@@ -7,14 +7,13 @@ from utils.crypto import decrypt_value
 
 class ZApiProvider(WhatsAppProvider):
     def __init__(self, instance_id: str, api_token: str):
-        # ✅ Já estão descriptografados aqui
         if not instance_id:
             raise ValueError("ZApiProvider: instance_id is None")
         if not api_token:
             raise ValueError("ZApiProvider: api_token is None")
 
         self.instance_id = instance_id
-        self.api_token = decrypt_value(api_token)
+        self.api_token = api_token  # ✅ ALREADY DECRYPTED before being passed in
 
         self.base_url = f"https://api.z-api.io/instances/{self.instance_id}/token/{self.api_token}"
 
@@ -26,7 +25,7 @@ class ZApiProvider(WhatsAppProvider):
         }
         headers = {
             "Content-Type": "application/json",
-            "Client-Token": str(self.api_token)
+            "Client-Token": self.api_token  # ✅ No extra str() or decode needed
         }
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers)
