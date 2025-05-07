@@ -111,6 +111,11 @@ admin_auth_backend = AdminAuth(secret_key=SECRET_KEY)
 
 def setup_admin(app, engine):
     admin = Admin(app=app, engine=engine, authentication_backend=admin_auth_backend)
+    
+    admin.add_view(ZApiInstanceAdmin)
     admin.add_view(CompanyAdmin)
     admin.add_view(ConversationAdmin)
-    admin.add_view(ZApiInstanceAdmin)
+    
+    print("✅ Views registradas no painel:")
+    for view in admin.views:
+        print(" -", view.model.__name__)
