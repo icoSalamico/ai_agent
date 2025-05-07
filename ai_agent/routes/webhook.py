@@ -93,7 +93,7 @@ async def receive_webhook(
         if provider_type == "meta":
             company = await get_company_by_phone(phone_number_id)
         else:
-            company = await get_company_by_display_number(from_number)
+            company = await get_company_by_display_number(from_number, db)
 
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
