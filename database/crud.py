@@ -52,6 +52,6 @@ async def get_company_by_instance_id(instance_id: str, db: AsyncSession) -> Opti
     )
     companies = result.scalars().all()
     for company in companies:
-        if company.decrypted_instance_id == instance_id:
+        if company.decrypted_zapi_instance_id == instance_id:
             return company
     return None
