@@ -1,19 +1,14 @@
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
-
-# Get your key from env
-SECRET_KEY = os.getenv("FERNET_SECRET_KEY")
-
-if not SECRET_KEY:
-    raise ValueError("FERNET_SECRET_KEY is not set in .env")
-
-fernet = Fernet(SECRET_KEY)
+FERNET_KEY = os.getenv("FERNET_SECRET_KEY")
+fernet = Fernet(FERNET_KEY.encode())
 
 def encrypt_value(value: str) -> str:
     return fernet.encrypt(value.encode()).decode()
 
 def decrypt_value(value: str) -> str:
-    return fernet.decrypt(value.encode()).decode()
+    try:
+        return fernet.decrypt(value.encode()).decode()
+    except InvalidToken:
+        raise ValueError("❌ Erro ao descriptografar o valor. Verifique se a FERNET_SECRET_KEY está correta.")
