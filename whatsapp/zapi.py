@@ -8,15 +8,25 @@ class ZApiProvider(WhatsAppProvider):
     def __init__(self, instance_id: str, api_token: str):
         self.base_url = f"https://api.z-api.io/instances/{instance_id}/token/{api_token}"
 
-    async def send_message(self, phone_number: str, message: str) -> dict:
-        url = f"{self.base_url}/send-messages"
-        payload = {
-            "phone": phone_number,
-            "message": message
-        }
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=payload)
-            return response.json()
+        async def send_message(self, phone_number: str, message: str) -> dict:
+            url = f"{self.base_url}/send-messages"
+            payload = {
+                "phone": phone_number,
+                "message": message
+            }
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, json=payload)
+                if response.status_code != 200:
+                    print(f"❌ Failed to send message to {phone_number}")
+                    print("URL:", url)
+                    print("Payload:", payload)
+                    print("Response:", response.status_code, response.text)
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to send message via Z-API: {response.text}"
+                    )
+                return response.json()
+
 
 ZAPI_API_BASE = "https://api.z-api.io"
 
