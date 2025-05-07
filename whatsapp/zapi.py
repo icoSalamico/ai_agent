@@ -88,12 +88,12 @@ async def create_zapi_instance(company_name: str, session_name: str, callback_ba
             raise HTTPException(status_code=500, detail=f"Failed to create Z-API instance: {e.response.text}")
         
 
-async def get_instance_qrcode(instance_id: str, api_token: str) -> str:
+async def get_instance_qrcode(instance_id: str, token: str) -> str:
     ZAPI_CLIENT_TOKEN = os.getenv("ZAPI_CLIENT_TOKEN")
     if not ZAPI_CLIENT_TOKEN:
         raise RuntimeError("❌ ZAPI_CLIENT_TOKEN is not set in env")
 
-    url = f"https://api.z-api.io/instances/{instance_id}/token/{api_token}/qr-code"
+    url = f"https://api.z-api.io/instances/{instance_id}/token/{token}/qr-code"
     headers = {
         "Client-Token": ZAPI_CLIENT_TOKEN
     }
@@ -103,5 +103,6 @@ async def get_instance_qrcode(instance_id: str, api_token: str) -> str:
         res.raise_for_status()
         data = res.json()
         print("📨 Dados recebidos da ZAPI:", data)
-        return data.get("qrcode", "")
+        return data.get("value", "")
+
 
