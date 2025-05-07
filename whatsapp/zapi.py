@@ -25,7 +25,7 @@ class ZApiProvider(WhatsAppProvider):
         }
         headers = {
             "Content-Type": "application/json",
-            "Client-Token": decrypt_value(self.api_token)  # ✅ No extra str() or decode needed
+            "Client-Token": self.api_token  # ✅ No extra str() or decode needed
         }
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers)
