@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, Form, Depends, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -112,5 +112,23 @@ async def register_company(
     print("🔗 QRCode valor:", qrcode)   
     return templates.TemplateResponse("registration_success.html", {
         "request": request,
-        "qrcode": qrcode
+        "qrcode": qrcode,
+        "company_id": new_company.id
     })
+
+
+@router.get("/get-qrcode/{company_id}", response_class=JSONResponse)
+async def get_qrcode(company_id: int, session: AsyncSession = Depends(get_db)):
+    result = await session.execute(select(Company).where(Company.id == company_id))
+    company = result.scalar_one_or_none()
+
+    if not company or not company.zapi_instance_id or not company.zapi_token:
+        return JSONResponse(content={"qrcode": None})
+
+    try:
+        instance_id = decrypt_value(company.zapi_instance_id)
+        token = decrypt_value(company.zapi_token)
+        qrcode = await get_instance_qrcode(instance_id, token)
+        return JSONResponse(content={"qrcode": qrcode})
+    except Exception:
+        return JSONResponse(content={"qrcode": None})

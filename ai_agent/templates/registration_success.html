@@ -69,10 +69,31 @@
                 {% if qrcode %}
                     <div class="qrcode-container">
                         <h4 class="text-success">Escaneie o QR Code abaixo para ativar o WhatsApp:</h4>
-                        <img src="{{ qrcode }}" alt="QR Code da Instância Z-API" />
+                        <img id="qrcode-img" src="{{ qrcode }}" alt="QR Code da Instância Z-API" />
                     </div>
                 {% endif %}
             </div>
         </div>
+
+        {% if company_id %}
+        <script>
+            const companyId = {{ company_id }};
+            const qrcodeImg = document.getElementById("qrcode-img");
+
+            async function fetchQRCode() {
+                try {
+                    const res = await fetch(`/get-qrcode/${companyId}`);
+                    const data = await res.json();
+                    if (data.qrcode && qrcodeImg.src !== data.qrcode) {
+                        qrcodeImg.src = data.qrcode;
+                    }
+                } catch (err) {
+                    console.error("Erro ao buscar QR Code atualizado:", err);
+                }
+            }
+
+            setInterval(fetchQRCode, 5000);
+        </script>
+        {% endif %}
     </body>
 </html>
