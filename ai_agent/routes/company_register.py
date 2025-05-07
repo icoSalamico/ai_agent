@@ -83,6 +83,7 @@ async def register_company(
             raise HTTPException(status_code=500, detail="No available Z-API instance.")
 
         instance.assigned = True
+        session.add(instance)
 
         # ✅ Evita recriptografia
         def is_encrypted(value: str) -> bool:
