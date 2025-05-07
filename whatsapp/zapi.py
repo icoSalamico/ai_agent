@@ -5,14 +5,15 @@ from fastapi import HTTPException
 
 class ZApiProvider(WhatsAppProvider):
     def __init__(self, instance_id: str, api_token: str):
-        # ✅ Assumimos que os valores já estão descriptografados
+        # ✅ Já estão descriptografados aqui
         if not instance_id:
             raise ValueError("ZApiProvider: instance_id is None")
         if not api_token:
             raise ValueError("ZApiProvider: api_token is None")
 
-        self.api_token = api_token
         self.instance_id = instance_id
+        self.api_token = api_token
+
         self.base_url = f"https://api.z-api.io/instances/{self.instance_id}/token/{self.api_token}"
 
     async def send_message(self, phone_number: str, message: str) -> dict:
