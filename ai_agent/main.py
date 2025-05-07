@@ -3,16 +3,12 @@ from contextlib import asynccontextmanager
 from fastapi.templating import Jinja2Templates
 from dependencies.security import verify_admin_key
 from fastapi import FastAPI, Request, Depends, Response
-from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.cors import CORSMiddleware
-from starlette.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 import os
-import json
 import logging
 import sqladmin
 
@@ -20,15 +16,10 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from database import init_db, SessionLocal, get_db
+from database import init_db, get_db
 from database.core import engine
-from ai_agent.routes import company_register
-from ai_agent.routes.webhook import webhook_router
-from ai_agent import adm
+from ai_agent.routes import company_register, webhook, prompt_test, dashboard
 from ai_agent.adm import setup_admin
-from ai_agent.routes import prompt_test
-from ai_agent.routes import dashboard
-
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -43,7 +34,7 @@ DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 # Rate limiting
 limiter = Limiter(key_func=get_remote_address)
 
-# ✅ Static files with CSP headers
+# ✅ Middleware para CSP nos arquivos estáticos
 class CSPStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope) -> Response:
         response = await super().get_response(path, scope)
@@ -56,12 +47,10 @@ class CSPStaticFiles(StaticFiles):
         )
         return response
 
-def get_base_url():
-    return os.getenv("RAILWAY_PUBLIC_DOMAIN", "aiagent-production-a50f.up.railway.app")
+# ✅ Corrige o path que o SQLAdmin usa para seus arquivos estáticos
+sqladmin.helpers.get_static_url_path = lambda name: f"/admin/statics/{name}"
 
-sqladmin.helpers.get_static_url_path = lambda name: f"{get_base_url()}/admin/statics/{name}"
-
-# Middleware para headers seguros
+# Middleware de segurança
 class SecureHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response: Response = await call_next(request)
@@ -83,35 +72,35 @@ app.add_middleware(SecureHeadersMiddleware)
 
 # Rotas e módulos
 app.include_router(prompt_test.router)
-app.include_router(webhook_router)
+app.include_router(webhook.webhook_router)
 app.include_router(company_register.router)
 app.include_router(dashboard.admin_router)
 
-# Admin com CSP
+# ✅ Serve os arquivos do painel admin corretamente no caminho /admin/statics
 app.mount(
     "/admin/statics",
     CSPStaticFiles(directory=os.path.join(os.path.dirname(sqladmin.__file__), "statics")),
     name="admin-statics",
 )
 
+# ✅ Serve seus arquivos estáticos próprios (como o logo)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Templates Jinja2
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 
 # Painel administrativo
 setup_admin(app, engine)
 
-# Rate limiting handler
+# Handler para rate limiting
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request, exc):
     return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
 
-# Rota principal
 @app.get("/")
 def home():
     return {"message": "WhatsApp AI Agent is running!"}
 
-# Ping para verificar conexão com o banco
 @app.get("/ping-db", dependencies=[Depends(verify_admin_key)])
 async def ping_db(session: AsyncSession = Depends(get_db)):
     try:
@@ -122,7 +111,6 @@ async def ping_db(session: AsyncSession = Depends(get_db)):
         logger.error("❌ DB error: %s", e)
         return {"db": "error", "detail": str(e)}
 
-# Health check
 @app.get("/health")
 def health():
     return {"status": "ok"}

@@ -9,8 +9,8 @@ import secrets
 
 from database.models import Company, ZApiInstance
 from database.crud import get_db
-from utils.crypto import encrypt_value
-# from whatsapp.zapi import create_zapi_instance  # Descomente quando for usar criação automática
+from utils.crypto import encrypt_value, decrypt_value
+from whatsapp.zapi import get_instance_qrcode  # ✅ função para buscar QR Code
 from ai_agent.routes.dashboard import send_dashboard_link
 
 router = APIRouter()
@@ -45,7 +45,6 @@ async def register_company(
     if key != COMPANY_REGISTRATION_KEY:
         raise HTTPException(status_code=403, detail="Invalid registration key.")
 
-    # ⚠️ Validação condicional para Meta
     if provider == "meta" and not phone_number_id:
         raise HTTPException(status_code=422, detail="Phone Number ID is required for Meta provider.")
 
@@ -60,8 +59,10 @@ async def register_company(
         tone=tone,
         language=language,
         verify_token=encrypt_value(verify_token),
-        phone_number_id=phone_number_id  # Armazena mesmo se for None, conforme permitido pelo modelo
+        phone_number_id=phone_number_id
     )
+
+    qrcode = None
 
     if provider == "meta":
         if not DEFAULT_WHATSAPP_TOKEN or not DEFAULT_WEBHOOK_SECRET:
@@ -73,7 +74,6 @@ async def register_company(
         if not BASE_DOMAIN:
             raise HTTPException(status_code=500, detail="RAILWAY_PUBLIC_DOMAIN not set.")
 
-        # 👇 Modo Manual: Buscar instância disponível
         result = await session.execute(
             select(ZApiInstance).where(ZApiInstance.assigned == False)
         )
@@ -85,32 +85,26 @@ async def register_company(
         instance.assigned = True
         session.add(instance)
 
-        # ✅ Evita recriptografia
         def is_encrypted(value: str) -> bool:
             return isinstance(value, str) and value.startswith("gAAAAA")
 
         new_company.zapi_instance_id = instance.instance_id if is_encrypted(instance.instance_id) else encrypt_value(instance.instance_id)
         new_company.zapi_token = instance.token if is_encrypted(instance.token) else encrypt_value(instance.token)
 
-
-        # ✅ Modo automático (comentado)
-        """
-        try:
-            instance_info = await create_zapi_instance(
-                name,
-                session_name=display_number,
-                callback_base_url=f"https://{BASE_DOMAIN}"
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to create Z-API instance: {str(e)}")
-
-        new_company.zapi_instance_id = encrypt_value(instance_info["instance_id"])
-        new_company.zapi_token = encrypt_value(instance_info["token"])
-        """
-
     session.add(new_company)
     await session.commit()
 
+    if provider == "zapi":
+        instance_id = decrypt_value(new_company.zapi_instance_id)
+        try:
+            qrcode = await get_instance_qrcode(instance_id)
+        except Exception as e:
+            print("⚠️ Failed to fetch QR Code:", str(e))
+            qrcode = None
+
     await send_dashboard_link(new_company)
 
-    return templates.TemplateResponse("registration_success.html", {"request": request})
+    return templates.TemplateResponse("registration_success.html", {
+        "request": request,
+        "qrcode": qrcode
+    })

@@ -5,7 +5,7 @@ from fastapi import HTTPException
 
 from utils.crypto import decrypt_value
 
-ZAPI_CLIENT_TOKEN = os.getenv("ZAPI_CLIENT_TOKEN")
+ZAPI_CLIENT_TOKEN = os.getenv("ZAPI_CLIENT_TOKEN").strip()
 
 class ZApiProvider(WhatsAppProvider):
     def __init__(self, instance_id: str, api_token: str):
@@ -86,3 +86,21 @@ async def create_zapi_instance(company_name: str, session_name: str, callback_ba
             print("Response status:", e.response.status_code)
             print("Response body:", e.response.text)
             raise HTTPException(status_code=500, detail=f"Failed to create Z-API instance: {e.response.text}")
+        
+
+async def get_instance_qrcode(instance_id: str) -> str:
+    ZAPI_CLIENT_TOKEN = os.getenv("ZAPI_CLIENT_TOKEN")
+    if not ZAPI_CLIENT_TOKEN:
+        raise RuntimeError("❌ ZAPI_CLIENT_TOKEN is not set in env")
+
+    url = f"https://api.z-api.io/instances/{instance_id}/qrcode"
+    headers = {
+        "Client-Token": ZAPI_CLIENT_TOKEN
+    }
+
+    async with httpx.AsyncClient() as client:
+        res = await client.get(url, headers=headers)
+        res.raise_for_status()
+        data = res.json()
+        return data.get("qrcode", "")
+
