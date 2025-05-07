@@ -13,7 +13,7 @@ class ZApiProvider(WhatsAppProvider):
             raise ValueError("ZApiProvider: api_token is None")
 
         self.instance_id = instance_id
-        self.api_token = api_token  # ✅ ALREADY DECRYPTED before being passed in
+        self.api_token = decrypt_value(api_token)  # ✅ ALREADY DECRYPTED before being passed in
 
         self.base_url = f"https://api.z-api.io/instances/{self.instance_id}/token/{self.api_token}"
 
@@ -25,7 +25,7 @@ class ZApiProvider(WhatsAppProvider):
         }
         headers = {
             "Content-Type": "application/json",
-            "Client-Token": self.api_token  # ✅ No extra str() or decode needed
+            "Client-Token": decrypt_value(self.api_token)  # ✅ No extra str() or decode needed
         }
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers)
