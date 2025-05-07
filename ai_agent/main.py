@@ -39,7 +39,7 @@ class CSPStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope) -> Response:
         response = await super().get_response(path, scope)
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
+            "default-src 'self' https:; "
             "style-src 'self' 'unsafe-inline' data: https://cdn.jsdelivr.net https://fonts.googleapis.com; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
             "font-src 'self' https://fonts.gstatic.com data:; "
@@ -47,8 +47,12 @@ class CSPStaticFiles(StaticFiles):
         )
         return response
 
-# ✅ Corrige o path que o SQLAdmin usa para seus arquivos estáticos
-sqladmin.helpers.get_static_url_path = lambda name: f"/admin/statics/{name}"
+# ✅ Corrige o path dos arquivos estáticos do admin com HTTPS
+def get_base_url():
+    domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "aiagent-production-a50f.up.railway.app")
+    return f"https://{domain}"
+
+sqladmin.helpers.get_static_url_path = lambda name: f"{get_base_url()}/admin/statics/{name}"
 
 # Middleware de segurança
 class SecureHeadersMiddleware(BaseHTTPMiddleware):
@@ -76,23 +80,23 @@ app.include_router(webhook.webhook_router)
 app.include_router(company_register.router)
 app.include_router(dashboard.admin_router)
 
-# ✅ Serve os arquivos do painel admin corretamente no caminho /admin/statics
+# ✅ Admin estático (com CSP)
 app.mount(
     "/admin/statics",
     CSPStaticFiles(directory=os.path.join(os.path.dirname(sqladmin.__file__), "statics")),
     name="admin-statics",
 )
 
-# ✅ Serve seus arquivos estáticos próprios (como o logo)
+# ✅ Seus próprios arquivos estáticos
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Templates Jinja2
+# Templates
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 
 # Painel administrativo
 setup_admin(app, engine)
 
-# Handler para rate limiting
+# Rate limiting handler
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request, exc):
     return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
