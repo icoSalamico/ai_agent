@@ -5,17 +5,14 @@ from fastapi import HTTPException
 
 class ZApiProvider(WhatsAppProvider):
     def __init__(self, instance_id: str, api_token: str):
-        # Ensure instance_id and api_token are not encrypted at this point
+        # ✅ Assumimos que os valores já estão descriptografados
         if not instance_id:
             raise ValueError("ZApiProvider: instance_id is None")
         if not api_token:
             raise ValueError("ZApiProvider: api_token is None")
-        
-        from utils.crypto import decrypt_value
 
-        self.api_token = decrypt_value(api_token)
+        self.api_token = api_token
         self.instance_id = instance_id
-
         self.base_url = f"https://api.z-api.io/instances/{self.instance_id}/token/{self.api_token}"
 
     async def send_message(self, phone_number: str, message: str) -> dict:
@@ -29,7 +26,7 @@ class ZApiProvider(WhatsAppProvider):
             "Client-Token": self.api_token
         }
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=payload, headers=headers)  # ✅ headers agora incluído
+            response = await client.post(url, json=payload, headers=headers)
             if response.status_code != 200:
                 print(f"❌ Failed to send message to {phone_number}")
                 print("URL:", url)
@@ -40,6 +37,7 @@ class ZApiProvider(WhatsAppProvider):
                     detail=f"Failed to send message via Z-API: {response.text}"
                 )
             return response.json()
+
 
 # Criação de instância on-demand
 ZAPI_API_BASE = "https://api.z-api.io"
