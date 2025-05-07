@@ -33,6 +33,7 @@ def build_messages(
     messages.append({"role": "user", "content": user_input})
     return messages
 
+
 async def generate_response(
     user_input: str,
     prompt: str,
@@ -41,6 +42,10 @@ async def generate_response(
     history: Optional[List[Dict[str, str]]] = None
 ) -> str:
     try:
+        # Segurança defensiva: impede passar objetos não-string
+        if not isinstance(prompt, str) or not isinstance(language, str) or not isinstance(tone, str):
+            raise TypeError("❌ Parâmetros inválidos: prompt, language e tone devem ser strings.")
+
         history = history or []
         client = get_openai_client()
         messages = build_messages(user_input, prompt, language, tone, history)
@@ -48,7 +53,7 @@ async def generate_response(
         logger.debug("🧠 Enviando mensagens para OpenAI:")
         logger.debug(messages)
 
-        completion = client.chat.completions.create(  # <-- corrigido aqui
+        completion = client.chat.completions.create(
             model="gpt-4o",
             messages=messages,
             temperature=0.7,
