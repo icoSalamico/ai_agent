@@ -3,6 +3,8 @@ from whatsapp.base import WhatsAppProvider
 import os
 from fastapi import HTTPException
 
+from utils.crypto import decrypt_value
+
 class ZApiProvider(WhatsAppProvider):
     def __init__(self, instance_id: str, api_token: str):
         # ✅ Já estão descriptografados aqui
@@ -24,7 +26,7 @@ class ZApiProvider(WhatsAppProvider):
         }
         headers = {
             "Content-Type": "application/json",
-            "Client-Token": self.api_token
+            "Client-Token": decrypt_value(self.api_token)
         }
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers)
