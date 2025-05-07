@@ -93,7 +93,7 @@ async def get_instance_qrcode(instance_id: str, token: str) -> str:
     if not ZAPI_CLIENT_TOKEN:
         raise RuntimeError("❌ ZAPI_CLIENT_TOKEN is not set in env")
 
-    url = f"https://api.z-api.io/instances/{instance_id}/token/{token}/qr-code"
+    url = f"https://api.z-api.io/instances/{instance_id}/token/{token}/qr-code/image"
     headers = {
         "Client-Token": ZAPI_CLIENT_TOKEN
     }
