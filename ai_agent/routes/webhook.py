@@ -172,10 +172,10 @@ async def receive_webhook(
         print("API Token:", decrypted_token)
         
         provider = get_provider(company.provider, {
-            "token": decrypt_value(company.whatsapp_token),
+            "token": decrypt_value(company.whatsapp_token) or "",
             "phone_number_id": company.phone_number_id,
-            "instance_id": decrypt_value(company.zapi_instance_id),
-            "api_token": decrypt_value(company.zapi_token)
+            "instance_id": decrypt_value(company.zapi_instance_id) or "",
+            "api_token": decrypt_value(company.zapi_token) or ""
         })
         await provider.send_message(phone_number=from_number, message=ai_response)
     else:

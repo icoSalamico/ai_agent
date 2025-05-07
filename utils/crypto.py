@@ -13,15 +13,17 @@ except Exception as e:
 
 
 def encrypt_value(value: str) -> str:
-    if not value:
-        raise ValueError("❌ Cannot encrypt an empty or None value")
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("❌ Cannot encrypt an empty, None, or non-string value.")
     return fernet.encrypt(value.encode()).decode()
 
 
-def decrypt_value(value: str | None) -> str | None:
-    if not value:
-        return None
+def decrypt_value(value: str | None) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("❌ Cannot decrypt an empty, None, or non-string value.")
     try:
         return fernet.decrypt(value.encode()).decode()
-    except (InvalidToken, AttributeError, TypeError):
-        return None
+    except InvalidToken:
+        raise ValueError("❌ Invalid token: decryption failed due to tampering or wrong key.")
+    except Exception as e:
+        raise ValueError(f"❌ Unexpected error during decryption: {e}")
