@@ -14,7 +14,7 @@ class ZApiProvider(WhatsAppProvider):
             raise ValueError("ZApiProvider: api_token is None")
 
         self.instance_id = instance_id
-        self.api_token = api_token
+        self.api_token = decrypt_value(api_token)
 
         self.base_url = f"https://api.z-api.io/instances/{self.instance_id}/token/{self.api_token}"
 

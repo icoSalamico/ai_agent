@@ -146,17 +146,9 @@ async def receive_webhook(
         ))
         await db.commit()
 
-        try:
-            whatsapp_token = decrypt_value(company.whatsapp_token) if company.whatsapp_token else ""
-            zapi_instance_id = decrypt_value(company.zapi_instance_id) if company.zapi_instance_id else ""
-            zapi_token = decrypt_value(company.zapi_token) if company.zapi_token else ""
-        except Exception as e:
-            print("❗ Erro ao descriptografar credenciais:", str(e))
-            raise HTTPException(status_code=500, detail="Erro ao descriptografar credenciais do provedor")
-
         print("🔧 Provider setup:")
-        print("Instance ID:", zapi_instance_id)
-        print("API Token:", zapi_token)
+        print("Instance ID:", company.zapi_instance_id)
+        print("API Token:", company.zapi_token)
 
         provider = get_provider(company.provider, {
             "token": company.whatsapp_token,
