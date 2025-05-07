@@ -35,11 +35,9 @@ async def receive_webhook(
         print("📨 Payload recebido:")
         print(json.dumps(data, indent=2))
 
-        # 🔍 Dumpa o tipo dos campos
         for key, value in data.items():
             print(f"🔍 {key} => {type(value).__name__}")
 
-        # Meta (Cloud API)
         if "entry" in data:
             phone_number_id = data["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"]
             message = data["entry"][0]["changes"][0]["value"]["messages"][0]
@@ -47,7 +45,6 @@ async def receive_webhook(
             user_message = message["text"]["body"]
             provider_type = "meta"
 
-        # Z-API: formato clássico
         elif "messages" in data:
             message = data["messages"][0]
             from_number = message["from"]
@@ -55,7 +52,6 @@ async def receive_webhook(
             phone_number_id = None
             provider_type = "zapi"
 
-        # Z-API: com "event": "message"
         elif "event" in data and data["event"] == "message" and "message" in data:
             message = data["message"]
             from_number = message["from"]
@@ -63,7 +59,6 @@ async def receive_webhook(
             phone_number_id = None
             provider_type = "zapi"
 
-        # ✅ Z-API: formato real com verificação de origem e conteúdo
         elif data.get("type") == "ReceivedCallback":
             if (
                 data.get("fromMe") is False
@@ -76,7 +71,6 @@ async def receive_webhook(
                 phone_number_id = None
                 provider_type = "zapi"
             else:
-                # Ignorar mensagens sem texto ou enviadas pelo próprio bot
                 return JSONResponse({"status": "ignored", "reason": "non-user message or system notification"})
 
         else:
@@ -84,11 +78,10 @@ async def receive_webhook(
 
     except Exception as e:
         print("📎 Erro ao processar o payload:")
-        print(traceback.format_exc())  # mostra linha exata
-        logger.exception("💥 Unhandled Exception")  # registra no log
+        print(traceback.format_exc())
+        logger.exception("💥 Unhandled Exception")
         raise HTTPException(status_code=500, detail=f"Unhandled error: {str(e)}")
 
-    # Get company
     if DEBUG_MODE:
         company = get_debug_company()
     else:
@@ -153,29 +146,23 @@ async def receive_webhook(
         ))
         await db.commit()
 
-        # 🛠️ Diagnóstico extra
-        if not company.zapi_instance_id:
-            print("❗ company.zapi_instance_id está vazio ou None.")
-        if not company.zapi_token:
-            print("❗ company.zapi_token está vazio ou None.")
-
-        # 🛠️ Confirma se o decrypt está mesmo funcionando
         try:
-            decrypted_instance = company.decrypted_zapi_instance_id
-            decrypted_token = company.decrypted_zapi_token
+            whatsapp_token = decrypt_value(company.whatsapp_token) if company.whatsapp_token else ""
+            zapi_instance_id = decrypt_value(company.zapi_instance_id) if company.zapi_instance_id else ""
+            zapi_token = decrypt_value(company.zapi_token) if company.zapi_token else ""
         except Exception as e:
-            print("❗ Erro ao descriptografar:", str(e))
-            raise HTTPException(status_code=500, detail="Erro ao descriptografar credenciais Z-API")
+            print("❗ Erro ao descriptografar credenciais:", str(e))
+            raise HTTPException(status_code=500, detail="Erro ao descriptografar credenciais do provedor")
 
         print("🔧 Provider setup:")
-        print("Instance ID:", decrypted_instance)
-        print("API Token:", decrypted_token)
-        
+        print("Instance ID:", zapi_instance_id)
+        print("API Token:", zapi_token)
+
         provider = get_provider(company.provider, {
-            "token": decrypt_value(company.whatsapp_token) or "",
+            "token": whatsapp_token,
             "phone_number_id": company.phone_number_id,
-            "instance_id": decrypt_value(company.zapi_instance_id) or "",
-            "api_token": decrypt_value(company.zapi_token) or ""
+            "instance_id": zapi_instance_id,
+            "api_token": zapi_token
         })
         await provider.send_message(phone_number=from_number, message=ai_response)
     else:
@@ -184,7 +171,6 @@ async def receive_webhook(
     return JSONResponse({"status": "received"})
 
 
-# --- Additional endpoints for Z-API events ---
 @webhook_router.post("/webhook/delivery")
 async def delivery_status(request: Request):
     data = await request.json()
