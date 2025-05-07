@@ -13,6 +13,8 @@ class ZApiProvider(WhatsAppProvider):
         
         from utils.crypto import decrypt_value
 
+        self.api_token = api_token
+
         self.base_url = f"https://api.z-api.io/instances/{instance_id}/token/{decrypt_value(api_token)}"
 
     async def send_message(self, phone_number: str, message: str) -> dict:
@@ -20,6 +22,10 @@ class ZApiProvider(WhatsAppProvider):
         payload = {
             "phone": phone_number,
             "message": message
+        }
+        headers = {
+            "Content-Type": "application/json",
+            "Client-Token": self.api_token
         }
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload)
