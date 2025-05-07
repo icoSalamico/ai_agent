@@ -64,6 +64,15 @@ class SecureHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
+    
+
+class HttpsRedirectScopeMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Garante que request.url_for use "https"
+        if request.url.scheme == "http":
+            request.scope["scheme"] = "https"
+        return await call_next(request)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -73,6 +82,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
 app.add_middleware(SecureHeadersMiddleware)
+app.add_middleware(HttpsRedirectScopeMiddleware)
+
 
 # Rotas e módulos
 app.include_router(prompt_test.router)
