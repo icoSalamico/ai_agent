@@ -5,4 +5,5 @@ __pycache__/
 .vscode/
 .idea/
 *.db
-ai_implementation_checklist.pdfgoogle calendar/credentials.json
+ai_implementation_checklist.pdf
+google calendar/credentials.json
