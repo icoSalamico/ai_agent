@@ -1,4 +1,3 @@
-<!-- templates/register_company.html -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -36,7 +35,7 @@
             border: 1px solid #303030;
         }
 
-        .form-select:focus {
+        .form-select:focus{
             border-color: #76FCA8;
         }
 
@@ -66,10 +65,6 @@
         label.form-label {
             color: #FFFFFF;
         }
-
-        hr {
-            border-color: #D9D9D9;
-        }
     </style>
 </head>
 <body>
@@ -95,10 +90,15 @@
                             <input type="text" class="form-control" id="display_number" name="display_number" placeholder="+55..." required>
                         </div>
 
+                        <!-- <div class="mb-3">
+                            <label for="phone_number_id" class="form-label">Phone Number ID *</label>
+                            <input type="text" class="form-control" id="phone_number_id" name="phone_number_id" placeholder="ID fornecido pelo Meta" required>
+                        </div> -->
+
                         <div class="mb-3">
                             <label for="provider" class="form-label">Provedor de WhatsApp *</label>
                             <select class="form-select" id="provider" name="provider" required>
-                                <option value="zapi" selected>Z-API (alternativo)</option>
+                                <option value="zapi">Z-API (alternativo)</option>
                             </select>
                         </div>
 
@@ -124,29 +124,6 @@
                                 <option value="Portuguese" selected>Português</option>
                                 <option value="English">Inglês</option>
                             </select>
-                        </div>
-
-                        <hr>
-                        <h5 class="text-center" style="color: #76FCA8;">Google Calendar (opcional)</h5>
-
-                        <div class="mb-3">
-                            <label for="google_refresh_token" class="form-label">Refresh Token</label>
-                            <input type="text" class="form-control" id="google_refresh_token" name="google_refresh_token">
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="google_access_token" class="form-label">Access Token</label>
-                            <input type="text" class="form-control" id="google_access_token" name="google_access_token">
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="google_token_expiry" class="form-label">Expiração do Token (ISO 8601)</label>
-                            <input type="text" class="form-control" id="google_token_expiry" name="google_token_expiry" placeholder="Ex: 2024-12-31T23:59:59Z">
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="google_calendar_id" class="form-label">ID do Google Calendar</label>
-                            <input type="text" class="form-control" id="google_calendar_id" name="google_calendar_id" placeholder="Ex: empresa@gmail.com">
                         </div>
 
                         <div class="d-grid">

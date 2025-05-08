@@ -1,4 +1,3 @@
-# google_calendar/session_state.py
 from datetime import datetime, timedelta
 import pytz
 
