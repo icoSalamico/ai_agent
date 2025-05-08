@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import pytz
-from google_calendar.core import suggest_available_slots, create_event
+from .calendar import suggest_available_slots, create_event
 
 class MeetingScheduler:
     def __init__(self, company_id: str):
