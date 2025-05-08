@@ -29,6 +29,12 @@ class Company(Base):
     zapi_instance_id = Column(String, nullable=True)
     zapi_token = Column(String, nullable=True)
 
+    # Google Calendar integration
+    google_refresh_token = Column(Text, nullable=True)
+    google_access_token = Column(Text, nullable=True)
+    google_token_expiry = Column(DateTime, nullable=True)
+    google_calendar_id = Column(String, nullable=True)
+
     # Optional flags or tracking
     active = Column(Boolean, default=True)
 
@@ -51,6 +57,14 @@ class Company(Base):
     @property
     def decrypted_zapi_instance_id(self):
         return decrypt_value(self.zapi_instance_id) if self.zapi_instance_id else None
+
+    @property
+    def decrypted_google_refresh_token(self):
+        return decrypt_value(self.google_refresh_token) if self.google_refresh_token else None
+
+    @property
+    def decrypted_google_access_token(self):
+        return decrypt_value(self.google_access_token) if self.google_access_token else None
 
 
 class Conversation(Base):

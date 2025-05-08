@@ -10,7 +10,7 @@ import secrets
 from database.models import Company, ZApiInstance
 from database.crud import get_db
 from utils.crypto import encrypt_value, decrypt_value
-from whatsapp.zapi import get_instance_qrcode  # ✅ função para buscar QR Code
+from whatsapp.zapi import get_instance_qrcode
 from ai_agent.routes.dashboard import send_dashboard_link
 
 router = APIRouter()
@@ -40,6 +40,10 @@ async def register_company(
     ai_prompt: str = Form(None),
     tone: str = Form("Formal"),
     language: str = Form("Portuguese"),
+    google_refresh_token: str = Form(None),
+    google_access_token: str = Form(None),
+    google_token_expiry: str = Form(None),
+    google_calendar_id: str = Form(None),
     session: AsyncSession = Depends(get_db)
 ):
     if key != COMPANY_REGISTRATION_KEY:
@@ -59,7 +63,11 @@ async def register_company(
         tone=tone,
         language=language,
         verify_token=encrypt_value(verify_token),
-        phone_number_id=phone_number_id
+        phone_number_id=phone_number_id,
+        google_refresh_token=encrypt_value(google_refresh_token) if google_refresh_token else None,
+        google_access_token=encrypt_value(google_access_token) if google_access_token else None,
+        google_token_expiry=google_token_expiry,
+        google_calendar_id=google_calendar_id
     )
 
     qrcode = None

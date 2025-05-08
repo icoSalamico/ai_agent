@@ -15,12 +15,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.crud import get_db
 from whatsapp.provider_factory import get_provider
 from utils.crypto import decrypt_value
-
+from google_calendar.scheduler import MeetingScheduler
+from google_calendar.session_state import MeetingSessionState
 
 webhook_router = APIRouter()
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
-
 logger = logging.getLogger(__name__)
+session_states = {}
 
 
 @webhook_router.post("/webhook")
@@ -34,9 +35,6 @@ async def receive_webhook(
         data = json.loads(raw_body)
         print("📨 Payload recebido:")
         print(json.dumps(data, indent=2))
-
-        for key, value in data.items():
-            print(f"🔍 {key} => {type(value).__name__}")
 
         if "entry" in data:
             phone_number_id = data["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"]
@@ -130,12 +128,44 @@ async def receive_webhook(
         if session and not session.ai_enabled:
             return JSONResponse({"status": "ignored", "reason": "AI disabled for this user"})
 
-    ai_response = await generate_response(
-        user_input=user_message,
-        prompt=company.ai_prompt or "Você é um assistente virtual educado e objetivo.",
-        language=company.language or "Portuguese",
-        tone=company.tone or "formal"
-    ) if not DEBUG_MODE else "🧪 [DEBUG] This is a test response."
+    # Google Calendar logic
+    if "agendar reunião" in user_message.lower():
+        scheduler = MeetingScheduler(company.id)
+        slots = await scheduler.suggest_slots()
+        session_states[from_number] = MeetingSessionState(company.id, from_number)
+        session_states[from_number].last_suggested_slots = slots
+
+        formatted = "\n".join([f"{i+1}. {s['start'][11:16]} às {s['end'][11:16]}" for i, s in enumerate(slots)])
+        ai_response = f"Claro! Aqui estão algumas opções:\n{formatted}\nResponda com o horário desejado para confirmar."
+
+    elif from_number in session_states:
+        state = session_states[from_number]
+        scheduler = MeetingScheduler(company.id)
+        status, slot = await scheduler.handle_user_response(user_message, state.last_suggested_slots)
+
+        if status == "confirm":
+            await scheduler.schedule_event(slot)
+            ai_response = f"✅ Sua reunião foi marcada para {slot['start'][11:16]}"
+            del session_states[from_number]
+        elif status == "retry":
+            state.advance_window()
+            new_slots = await scheduler.suggest_slots()
+            state.last_suggested_slots = new_slots
+            formatted = "\n".join([f"{i+1}. {s['start'][11:16]} às {s['end'][11:16]}" for i, s in enumerate(new_slots)])
+            ai_response = f"Sem problemas. Que tal essas novas opções?\n{formatted}"
+        elif status == "abort":
+            ai_response = "Tudo bem, deixaremos para outro momento."
+            del session_states[from_number]
+        else:
+            ai_response = "Desculpe, não entendi. Você pode repetir o horário desejado?"
+
+    else:
+        ai_response = await generate_response(
+            user_input=user_message,
+            prompt=company.ai_prompt or "Você é um assistente virtual educado e objetivo.",
+            language=company.language or "Portuguese",
+            tone=company.tone or "formal"
+        ) if not DEBUG_MODE else "🧪 [DEBUG] This is a test response."
 
     if not DEBUG_MODE:
         db.add(Conversation(
@@ -145,10 +175,6 @@ async def receive_webhook(
             ai_response=ai_response
         ))
         await db.commit()
-
-        print("🔧 Provider setup:")
-        print("Instance ID:", company.zapi_instance_id)
-        print("API Token:", company.zapi_token)
 
         provider = get_provider(company.provider, {
             "token": company.whatsapp_token,
