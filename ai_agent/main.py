@@ -18,7 +18,7 @@ from slowapi.errors import RateLimitExceeded
 
 from database import init_db, get_db
 from database.core import engine
-from ai_agent.routes import company_register, webhook, prompt_test, dashboard, calendar_auth, debug
+from ai_agent.routes import company_register, webhook, prompt_test, dashboard, calendar_auth
 from ai_agent.adm import setup_admin
 
 from dotenv import load_dotenv
@@ -91,7 +91,6 @@ app.include_router(webhook.webhook_router)
 app.include_router(company_register.router)
 app.include_router(dashboard.admin_router)
 app.include_router(calendar_auth.router)
-app.include_router(debug.router)
 
 # ✅ Admin estático (com CSP)
 app.mount(
