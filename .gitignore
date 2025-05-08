@@ -6,4 +6,8 @@ __pycache__/
 .idea/
 *.db
 ai_implementation_checklist.pdf
+<<<<<<< HEAD
 google calendar/credentials.json
+=======
+"google calendar"/credentials.json
+>>>>>>> 7777c7a (Add Google Calendar functionality)
