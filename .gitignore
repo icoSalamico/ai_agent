@@ -6,7 +6,7 @@ __pycache__/
 .idea/
 *.db
 ai_implementation_checklist.pdf
-google calendar/credentials.json
+google_calendar/credentials.json
 
 
 
